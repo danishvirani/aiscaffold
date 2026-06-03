@@ -1,0 +1,27 @@
+---
+name: {{name}}-bootstrap
+description: Load {{name}}'s session context at the start of work. Use when beginning a task that involves {{name}}, or when you need to know what commands {{name}} exposes and how to extend it.
+---
+
+# {{name}} bootstrap
+
+{{description}}
+
+At the start of a session that touches {{name}}, run its brief command to load
+the project's shape — commands, surfaces, and how to extend them — into context:
+
+```bash
+{{name}} brief
+```
+
+Paste the output, or read it, before planning changes. The brief is the source
+of truth for {{name}}'s command surface; prefer it over guessing.
+
+## Surfaces
+- **CLI** — `{{name}} <command>`. Definitions in `src/{{package}}/cli.py`.
+{{#if with_mcp}}
+- **MCP server** — `{{name}} mcp`. Tools in `src/{{package}}/mcp.py`.
+{{/if}}
+- **Slash commands** — `plugins/{{name}}/commands/`.
+
+When adding a capability, wire it across every surface so they stay in sync.

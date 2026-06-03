@@ -1,0 +1,76 @@
+"""Scaffold orchestrator.
+
+Walks the template tree, classifies each file by surface, prunes surfaces the
+user turned off, renders the rest, and writes them into the output directory.
+Stdlib-only.
+"""
+
+from pathlib import Path
+
+from create_ai_cli.render import (
+    TEMPLATES_DIR,
+    Context,
+    render_conditionals,
+    render_path,
+    render_string,
+)
+
+# Files that must keep their executable bit when written.
+_EXECUTABLE = {"install.sh"}
+
+
+def classify_surface(rel_path: Path) -> str:
+    """Return the surface a template file belongs to: core | plugin | skill | mcp."""
+    parts = rel_path.parts
+    if "skills" in parts and parts[0] == "plugins":
+        return "skill"
+    if parts[0] == "plugins":
+        return "plugin"
+    if rel_path.name == "mcp.py.tmpl":
+        return "mcp"
+    return "core"
+
+
+def _included(surface: str, ctx: Context) -> bool:
+    if surface == "mcp":
+        return ctx.with_mcp
+    if surface == "plugin":
+        return ctx.with_plugin
+    if surface == "skill":
+        # The skill lives inside the plugin dir; no plugin means no host for it.
+        return ctx.with_plugin and ctx.with_skill
+    return True
+
+
+def iter_templates(templates_dir: Path = TEMPLATES_DIR):
+    """Yield (relative_path, absolute_path) for every template file."""
+    for path in sorted(templates_dir.rglob("*")):
+        if path.is_file():
+            yield path.relative_to(templates_dir), path
+
+
+def scaffold(ctx: Context, out_dir: Path, templates_dir: Path = TEMPLATES_DIR) -> list[Path]:
+    """Render the scaffold into *out_dir*. Returns the list of files written
+    (paths relative to out_dir)."""
+    variables = ctx.as_dict()
+    flags = ctx.flags()
+    written: list[Path] = []
+
+    for rel_path, abs_path in iter_templates(templates_dir):
+        if not _included(classify_surface(rel_path), ctx):
+            continue
+
+        target_rel = render_path(rel_path, variables)
+        target = out_dir / target_rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        text = render_conditionals(abs_path.read_text(encoding="utf-8"), flags)
+        rendered = render_string(text, variables)
+        target.write_text(rendered, encoding="utf-8")
+
+        if target.name in _EXECUTABLE:
+            target.chmod(0o755)
+
+        written.append(target_rel)
+
+    return written
