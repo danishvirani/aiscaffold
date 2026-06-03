@@ -1,4 +1,4 @@
-"""Tests for the create-ai-cli scaffolder.
+"""Tests for the aiscaffold scaffolder.
 
 Covers the CLI surface, the render core (variables + conditionals), and the
 scaffold orchestrator (full bundle + surface pruning), including a compile
@@ -13,16 +13,16 @@ from contextlib import redirect_stdout
 
 import pytest
 
-import create_ai_cli
-from create_ai_cli import cli
-from create_ai_cli.render import RenderError, render_conditionals, render_string
+import aiscaffold
+from aiscaffold import cli
+from aiscaffold.render import RenderError, render_conditionals, render_string
 
 
 # --- CLI surface ---------------------------------------------------------
 
 
 def test_version_constant():
-    assert create_ai_cli.__version__ == "0.0.1"
+    assert aiscaffold.__version__ == "0.0.1"
 
 
 def test_help_renders():
@@ -33,7 +33,7 @@ def test_help_renders():
             parser.parse_args(["--help"])
         assert exc.value.code == 0
     out = captured.getvalue()
-    assert "create-ai-cli" in out
+    assert "aiscaffold" in out
     assert "name" in out
     assert "--no-mcp" in out
 
@@ -44,7 +44,7 @@ def test_version_flag():
         with pytest.raises(SystemExit) as exc:
             cli.main(["--version"])
         assert exc.value.code == 0
-    assert "create-ai-cli 0.0.1" in captured.getvalue()
+    assert "aiscaffold 0.0.1" in captured.getvalue()
 
 
 def test_invalid_name_rejected(tmp_path):

@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "create-ai-cli"
+name = "aiscaffold"
 version = "0.0.1"
 description = "Bootstrap a full AI-native CLI stack in 30s"
 readme = "README.md"
@@ -25,12 +25,12 @@ classifiers = [
 ]
 
 [project.scripts]
-create-ai-cli = "create_ai_cli.cli:main"
+aiscaffold = "aiscaffold.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/danishvirani/create-ai-cli"
-Repository = "https://github.com/danishvirani/create-ai-cli"
-Issues = "https://github.com/danishvirani/create-ai-cli/issues"
+Homepage = "https://github.com/danishvirani/aiscaffold"
+Repository = "https://github.com/danishvirani/aiscaffold"
+Issues = "https://github.com/danishvirani/aiscaffold/issues"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.5"]
@@ -39,7 +39,7 @@ dev = ["pytest>=8.0", "ruff>=0.5"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-create_ai_cli = ["templates/**/*", "templates/**/.*"]
+aiscaffold = ["templates/**/*", "templates/**/.*"]
 
 [tool.ruff]
 line-length = 100

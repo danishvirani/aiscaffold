@@ -1,4 +1,4 @@
-"""create-ai-cli entry point.
+"""aiscaffold entry point.
 
 Scaffolds a full AI-native CLI stack (CLI + Claude Code plugin + skill + MCP
 server + brief command) into a new directory. Stdlib-only. Interactive prompts
@@ -11,9 +11,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-from create_ai_cli import __version__
-from create_ai_cli.render import Context
-from create_ai_cli.scaffold import scaffold
+from aiscaffold import __version__
+from aiscaffold.render import Context
+from aiscaffold.scaffold import scaffold
 
 _NAME_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9-]*$")
 
@@ -83,13 +83,13 @@ def _build_context(args: argparse.Namespace) -> Context:
 
 def cmd_scaffold(args: argparse.Namespace) -> int:
     if not _NAME_RE.match(args.name):
-        _eprint(f"create-ai-cli: invalid name {args.name!r}")
+        _eprint(f"aiscaffold: invalid name {args.name!r}")
         _eprint("Names must start with a letter and contain only letters, digits, and dashes.")
         return 2
 
     out_dir = Path(args.output_dir) if args.output_dir else Path.cwd() / args.name
     if out_dir.exists() and any(out_dir.iterdir()):
-        _eprint(f"create-ai-cli: {out_dir} already exists and is not empty.")
+        _eprint(f"aiscaffold: {out_dir} already exists and is not empty.")
         return 1
 
     ctx = _build_context(args)
@@ -112,12 +112,12 @@ def cmd_scaffold(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="create-ai-cli",
+        prog="aiscaffold",
         description="Bootstrap a full AI-native CLI stack in 30s: "
         "stdlib CLI + Claude Code plugin + skill + MCP server + brief command.",
-        epilog="Full docs at https://github.com/danishvirani/create-ai-cli",
+        epilog="Full docs at https://github.com/danishvirani/aiscaffold",
     )
-    parser.add_argument("-V", "--version", action="version", version=f"create-ai-cli {__version__}")
+    parser.add_argument("-V", "--version", action="version", version=f"aiscaffold {__version__}")
     parser.add_argument("name", help="Name of the AI-native CLI to scaffold (e.g. my-tool)")
     parser.add_argument(
         "-o", "--output-dir", default=None, help="Where to write (default: ./<name>)"

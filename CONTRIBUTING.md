@@ -1,6 +1,6 @@
-# Contributing to create-ai-cli
+# Contributing to aiscaffold
 
-create-ai-cli is opinionated by design: it scaffolds AI-native CLIs, and it
+aiscaffold is opinionated by design: it scaffolds AI-native CLIs, and it
 embodies what it promotes. Contributions are welcome but must respect the
 constraints below.
 
@@ -11,18 +11,18 @@ constraints below.
    `urllib` + ANSI escapes is the toolbox. The tool that promotes zero-dep AI
    CLIs cannot itself drag in dependencies. See
    [ADR-001](docs/decisions/ADR-001-stdlib-only.md).
-2. **The install command stays one shell line forever.** `pipx run create-ai-cli`
+2. **The install command stays one shell line forever.** `pipx run aiscaffold`
    or `curl ... | sh`. No Node, no `pip install` + venv dance. Every PR is
    checked against this.
-3. **The full bundle is the product.** create-ai-cli emits CLI + Claude Code
+3. **The full bundle is the product.** aiscaffold emits CLI + Claude Code
    plugin + skill + MCP server + brief command together. A change that breaks
    the "one command, all four surfaces" demo doesn't ship.
 
 ## Setup
 
 ```bash
-git clone git@github.com:danishvirani/create-ai-cli.git ~/code/create-ai-cli
-cd ~/code/create-ai-cli
+git clone git@github.com:danishvirani/aiscaffold.git ~/code/aiscaffold
+cd ~/code/aiscaffold
 ./install.sh
 pip install -e ".[dev]"
 pytest tests/ -v
@@ -53,9 +53,9 @@ pytest tests/ -v
 - `string.Template` / hand-rolled substitution, not `jinja2`
 - `print` + ANSI escape constants, not `rich`
 - Module-level functions before classes. Classes only when state is real.
-- Match the existing patterns in `src/create_ai_cli/cli.py`.
+- Match the existing patterns in `src/aiscaffold/cli.py`.
 
 ## Reporting bugs
 
-Open an issue with: create-ai-cli version (`create-ai-cli --version`), Python
+Open an issue with: aiscaffold version (`aiscaffold --version`), Python
 version, the command you ran, the output you got, the output you expected.

@@ -21,7 +21,7 @@ No Node. No SDK. No `pip install` wall. Python 3.10+ is all you need.
 
 ## The four surfaces
 
-Scaffolded by [create-ai-cli](https://github.com/danishvirani/create-ai-cli). Everything is wired and stdlib-only:
+Scaffolded by [aiscaffold](https://github.com/danishvirani/aiscaffold). Everything is wired and stdlib-only:
 
 - **CLI** — `src/{{package}}/cli.py`, a stdlib `argparse` binary. Add commands by copying the `{{command}}` pattern.
 - **Claude Code plugin** — `plugins/{{name}}/`: a manifest, a slash command per CLI command, and an auto-loading bootstrap skill. Use it with `claude --plugin-dir ./plugins/{{name}}` or symlink it into `~/.claude/plugins/`.

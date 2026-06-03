@@ -7,7 +7,7 @@ Stdlib-only.
 
 from pathlib import Path
 
-from create_ai_cli.render import (
+from aiscaffold.render import (
     TEMPLATES_DIR,
     Context,
     render_conditionals,
