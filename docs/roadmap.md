@@ -1,0 +1,100 @@
+# create-ai-cli — build roadmap
+
+Date: 2026-06-03
+Status: v0.0 (scaffold)
+
+Engineering plan, not a marketing roadmap. Each version is a real, shippable artifact a stranger can install and use. Ship when the DoD line below is true.
+
+---
+
+## v0.0 — scaffold (current)
+
+**What works:**
+- `create-ai-cli --help` renders, shows the `name` positional and `--no-plugin` / `--no-mcp` / `--no-skill` flags
+- `create-ai-cli --version` prints `create-ai-cli 0.0.1`
+- `create-ai-cli <name>` exits 1 with "scaffolder not yet implemented" + roadmap pointer
+- `pip install -e ".[dev]"` works
+- `./install.sh` writes a launcher at `~/.local/bin/create-ai-cli`
+- CI passes: ruff lint + ruff format + pytest on Python 3.10 / 3.11 / 3.12 across Ubuntu + macOS
+
+**What does NOT work yet:**
+- No templates are rendered — there is no `src/create_ai_cli/templates/` yet
+- No file is written to disk; the scaffolder is a stub
+
+**DoD:** ✅ shipped.
+
+---
+
+## v0.1 — the real scaffolder
+
+The first version someone can actually use. One command produces a working four-surface AI CLI.
+
+**DoD:** `pipx run create-ai-cli my-tool` produces a working CLI + Claude Code plugin + MCP server + skill + brief + install.sh + CI, wired up. 60 seconds from invocation to "Claude can use my tool." Final acceptance: `pipx run create-ai-cli redink` reproduces redink's v0.0 shape.
+
+### Architecture
+
+- Templates in `src/create_ai_cli/templates/` as plain files, shipped as package data.
+- Stdlib rendering: `string.Template` or hand-rolled `{{var}}` substitution. No `jinja2`.
+- A renderer that walks the template tree, substitutes variables, and writes into the chosen output dir.
+- All four surfaces by default; `--no-plugin`, `--no-mcp`, `--no-skill` prune the tree.
+- Interactive prompts and flag-based invocation both supported.
+
+### Commits in order
+
+1. **Template-rendering core** — `string.Template`-based renderer + a variable context (`name`, `package` (underscored), `description`, `commands`, `license`, `year`, `author`). Render a tree from `templates/` into an output dir, skipping pruned surfaces. Tests render into a tmp dir and assert file existence + substitution.
+2. **CLI template** — `templates/src/{{package}}/cli.py.tmpl` — argparse CLI with one working command + a pre-wired `brief` subcommand that prints a Markdown context block.
+3. **MCP server template** — `templates/src/{{package}}/mcp.py.tmpl` — hand-rolled stdio JSON-RPC, ~150 lines, stdlib only. Exposes one tool that calls the same code path as the CLI command.
+4. **Plugin templates** — `.claude-plugin/plugin.json`, `commands/<cmd>.md` per command, generated from the commands list.
+5. **Skill template** — `skills/{{name}}-bootstrap/SKILL.md`, an auto-loading skill that references `<name> brief`.
+6. **Project-meta templates** — `install.sh`, `pyproject.toml`, `.github/workflows/ci.yml`, `README.md`, `.gitignore`, `LICENSE` (MIT), `tests/test_smoke.py`.
+7. **Interactive mode** — when invoked with just a name (or no name), prompt for description, commands, license. Flag-based path stays for scripting.
+8. **Post-scaffold output** — print the one-line install instruction, the "add to Claude Code" instruction (symlink to `~/.claude/plugins/`), and the "use as MCP server" instruction.
+9. **Dogfood test** — `create-ai-cli redink` in CI, asserting the output matches redink's v0.0 file shape.
+
+**README diff when v0.1 ships:** drop "scaffold" framing, add a sub-30-second screencast gif, bump version.
+
+---
+
+## v0.2 — polish + the things that make it stick
+
+**DoD:**
+1. Generated tools pass their own CI on first push (the scaffold's CI is green out of the box).
+2. `create-ai-cli` supports adding a command to an existing scaffold without re-running the whole generator.
+
+**Commits:**
+1. **`create-ai-cli add-command <cmd>`** — append a command to an existing scaffold: CLI subcommand stub, plugin command markdown, MCP tool entry.
+2. **Richer brief template** — the generated `brief` emits project structure, command list, and a "how to extend" section, not just a stub.
+3. **`uvx` parity** — verify and document `uvx create-ai-cli` alongside `pipx run`.
+4. **Screencast + landing** — sub-30-second demo gif in the README; a single-page landing.
+5. **Template lint** — a CI job that scaffolds, then runs the generated project's own ruff + pytest, catching template rot.
+
+---
+
+## v0.3 — the upgrade story (template rot is the silent killer)
+
+Template rot kills scaffolders in 2-3 quarters: plugin manifest schema, MCP APIs, and Claude Code conventions change quarterly. A scaffolder that emits stale templates becomes worse than nothing.
+
+**DoD:**
+- `create-ai-cli upgrade` diffs a user's existing scaffold against the current templates and applies non-conflicting updates, flagging conflicts for manual resolution.
+- Templates pin against a specific Claude Code / MCP convention version recorded in the generated manifest.
+
+**Commits:**
+1. **Version-stamp generated scaffolds** — record the create-ai-cli version + template version in the generated `pyproject.toml` / manifest.
+2. **`create-ai-cli upgrade` core** — three-way diff (original template, current template, user's file); clean-apply the non-conflicting hunks.
+3. **Conflict reporting** — list files needing manual merge, with the template diff inline.
+4. **`docs/upgrading.md`** — the upgrade workflow, documented.
+
+---
+
+## Beyond v0.3 (radar, not committed)
+
+- **More languages** — a Go single-binary backend option; deferred because Node/TS is already well-served by Anthropic's tooling and Python stdlib is the wedge.
+- **Marketplace submission flow** — generate the marketplace manifest + a `submit` helper.
+- **Hooks + agents surfaces** — extend beyond the four core surfaces once they're rock-solid.
+- **PyPI publish of the scaffold** — `pipx run` stays canonical; `pipx install create-ai-cli` as fallback.
+
+## What would make us slow down or pivot
+
+- **Anthropic ships a one-shot full-bundle scaffolder** (`claude plugin create --full`). Coverage differentiator gone — pivot to the opinionated stdlib-only minimalist alternative, or kill. Yeoman's lesson: too general loses, sharply opinionated wins.
+- **The audience is shallower than it looks.** Most authors ship one thing. If usage caps low, treat this as a credibility play — the name and demo are the win.
+- **Template rot outruns the upgrade story.** If templates fall behind faster than `upgrade` can keep up, the tool dies. Prioritize v0.3.

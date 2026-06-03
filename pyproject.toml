@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "create-ai-cli"
+version = "0.0.1"
+description = "Bootstrap a full AI-native CLI stack in 30s"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Danish Virani" }]
+keywords = ["ai", "claude-code", "mcp", "plugin", "scaffold", "cli", "generator", "stdlib"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Code Generators",
+]
+
+[project.scripts]
+create-ai-cli = "create_ai_cli.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/danishvirani/create-ai-cli"
+Repository = "https://github.com/danishvirani/create-ai-cli"
+Issues = "https://github.com/danishvirani/create-ai-cli/issues"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.5"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
