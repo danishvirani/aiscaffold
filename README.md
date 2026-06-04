@@ -72,7 +72,7 @@ aiscaffold --help
 
 ## Status
 
-v0.1 (in progress) — the real scaffolder. Renders all four surfaces into your chosen directory, wired up, with the generated project's own CI green. All four target languages — **Python, Go, Rust, and Node** — are complete and verified end-to-end (build/check + lint + test + a live MCP stdio roundtrip). See [`docs/roadmap.md`](docs/roadmap.md).
+**v0.1.0** — the real scaffolder. Renders all four surfaces into your chosen directory, wired up, with the generated project's own CI green. All four target languages — **Python, Go, Rust, and Node** — are complete and verified end-to-end (build/check + lint + test + a live MCP stdio roundtrip). See [`docs/roadmap.md`](docs/roadmap.md).
 
 ## License
 

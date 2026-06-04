@@ -32,7 +32,7 @@ from aiscaffold.scaffold import LANGUAGES, template_roots
 
 
 def test_version_constant():
-    assert aiscaffold.__version__ == "0.0.1"
+    assert aiscaffold.__version__ == "0.1.0"
 
 
 def test_help_renders():
@@ -55,7 +55,7 @@ def test_version_flag():
         with pytest.raises(SystemExit) as exc:
             cli.main(["--version"])
         assert exc.value.code == 0
-    assert "aiscaffold 0.0.1" in captured.getvalue()
+    assert "aiscaffold 0.1.0" in captured.getvalue()
 
 
 def test_invalid_name_rejected(tmp_path):

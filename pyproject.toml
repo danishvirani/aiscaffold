@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aiscaffold"
-version = "0.0.1"
+version = "0.1.0"
 description = "Bootstrap a full AI-native CLI stack in 30s"
 readme = "README.md"
 license = { text = "MIT" }

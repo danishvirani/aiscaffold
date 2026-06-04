@@ -1,7 +1,7 @@
 # aiscaffold — build roadmap
 
 Date: 2026-06-03
-Status: v0.0 (scaffold)
+Status: v0.1.0 (released) — all four language targets complete
 
 Engineering plan, not a marketing roadmap. Each version is a real, shippable artifact a stranger can install and use. Ship when the DoD line below is true.
 
