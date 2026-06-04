@@ -2,8 +2,9 @@
 
 Covers the CLI surface, the render core (variables + conditionals), and the
 scaffold orchestrator across every supported language (full bundle + surface
-pruning). For Python it compiles the output; for Go and Rust it actually
-builds, lints, tests, runs the CLI, and exercises a live MCP stdio roundtrip.
+pruning). For Python it compiles the output; for Go, Rust, and Node it actually
+builds/checks, lints, tests, runs the CLI, and exercises a live MCP stdio
+roundtrip.
 """
 
 import io
@@ -230,6 +231,26 @@ def test_rejects_unimplemented_language(tmp_path):
     assert exc.value.code == 2
 
 
+def test_no_conditional_markers_leak_in_any_language(tmp_path):
+    # The renderer's {{#if}}/{{/if}} conditionals are line-based: a marker must
+    # own its line. An inline marker is silently left as literal text (it lands
+    # in a comment, so the toolchain never complains) — this guard catches that
+    # for every language, in both the full bundle and the --no-mcp variant.
+    # NB: GitHub Actions ${{ ... }} is legal output, so we only forbid the
+    # conditional markers themselves, not all double-braces.
+    for lang in LANGUAGES:
+        for tag, disable in (("full", []), ("nomcp", ["--no-mcp"])):
+            target = tmp_path / f"{lang}-{tag}"
+            args = ["my-tool", "-o", str(target), "--yes", "--lang", lang, *disable]
+            assert cli.main(args) == 0
+            for path in target.rglob("*"):
+                if not path.is_file():
+                    continue
+                text = path.read_text(encoding="utf-8", errors="ignore")
+                assert "{{#if" not in text, f"leftover {{#if}} in {lang} {path}"
+                assert "{{/if}}" not in text, f"leftover {{/if}} in {lang} {path}"
+
+
 # --- Go end-to-end (skipped when the toolchain is absent) ----------------
 
 _GO = shutil.which("go")
@@ -365,3 +386,67 @@ def test_rust_no_mcp_prunes_and_still_builds(tmp_path):
     assert "serde_json" not in (out / "Cargo.toml").read_text()
     r = subprocess.run(["cargo", "build"], cwd=out, capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
+
+
+# --- Node end-to-end (skipped when the toolchain is absent) --------------
+
+_NODE = shutil.which("node")
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not installed")
+def test_node_full_bundle_checks_and_tests(tmp_path):
+    out = _scaffold(tmp_path, lang="node")
+    assert (out / "package.json").exists()
+    assert (out / "src/cli.js").exists()
+    assert (out / "src/mcp.js").exists()
+    assert (out / "test/cli.test.js").exists()
+    assert (out / "test/mcp/roundtrip.test.js").exists()
+    assert (out / "README.md").exists()
+    assert (out / "install.sh").exists()
+    assert (out / ".github/workflows/ci.yml").exists()
+    # Shared surfaces come along for the ride.
+    assert (out / "LICENSE").exists()
+    assert (out / "plugins/my-tool/.claude-plugin/plugin.json").exists()
+    assert (out / "plugins/my-tool/commands/scan.md").exists()
+    # Zero dependencies — no dependencies block in package.json.
+    assert "dependencies" not in (out / "package.json").read_text()
+
+    for src in ("src/cli.js", "src/mcp.js"):
+        r = subprocess.run(["node", "--check", src], cwd=out, capture_output=True, text=True)
+        assert r.returncode == 0, f"node --check {src}\n{r.stderr}"
+    t = subprocess.run(["node", "--test"], cwd=out, capture_output=True, text=True)
+    assert t.returncode == 0, f"{t.stdout}\n{t.stderr}"
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not installed")
+def test_node_runs_cli_and_mcp(tmp_path):
+    out = _scaffold(tmp_path, lang="node")
+    cli_js = str(out / "src/cli.js")
+
+    ran = subprocess.run(["node", cli_js, "scan"], capture_output=True, text=True)
+    assert ran.returncode == 0 and ran.stdout.strip()
+
+    brief = subprocess.run(["node", cli_js, "brief"], capture_output=True, text=True)
+    assert "my-tool" in brief.stdout
+
+    mcp = subprocess.run(
+        ["node", cli_js, "mcp"],
+        input='{"jsonrpc": "2.0", "id": 1, "method": "initialize"}\n',
+        capture_output=True,
+        text=True,
+    )
+    assert '"serverInfo"' in mcp.stdout
+    assert "my-tool" in mcp.stdout
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not installed")
+def test_node_no_mcp_prunes_and_still_checks(tmp_path):
+    out = _scaffold(tmp_path, lang="node", disable=["--no-mcp"])
+    assert not (out / "src/mcp.js").exists()
+    assert not (out / "test/mcp").exists()
+    cli_src = (out / "src/cli.js").read_text()
+    assert "mcp.js" not in cli_src
+    r = subprocess.run(["node", "--check", "src/cli.js"], cwd=out, capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    t = subprocess.run(["node", "--test"], cwd=out, capture_output=True, text=True)
+    assert t.returncode == 0, f"{t.stdout}\n{t.stderr}"

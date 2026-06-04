@@ -8,6 +8,7 @@ Run it:
 pipx run aiscaffold my-tool              # Python (default)
 pipx run aiscaffold my-tool --lang go    # Go
 pipx run aiscaffold my-tool --lang rust  # Rust
+pipx run aiscaffold my-tool --lang node  # Node (plain JS)
 ```
 
 Or curl-install the dev build:
@@ -42,7 +43,7 @@ my-tool --help
 | `python` (default) | `argparse` | hand-rolled stdio JSON-RPC | stdlib only |
 | `go` | stdlib `flag`-free dispatch | `encoding/json` stdio JSON-RPC | stdlib only |
 | `rust` | `std::env` match dispatch | hand-rolled stdio JSON-RPC | `serde_json` (MCP only) |
-| `node` | _coming next_ | | |
+| `node` | plain ESM, no build step | built-in `JSON` + `node:readline` | zero deps (runtime *and* dev) |
 
 Each language emits a complete, idiomatic project that builds, tests, lints, and runs its own CI green out of the box. The Claude Code plugin and bootstrap skill are language-agnostic and shared across every target.
 
@@ -71,7 +72,7 @@ aiscaffold --help
 
 ## Status
 
-v0.1 (in progress) — the real scaffolder. Renders all four surfaces into your chosen directory, wired up, with the generated project's own CI green. Python, Go, and Rust are complete and verified end-to-end (build/lint/test + a live MCP stdio roundtrip); Node is next. See [`docs/roadmap.md`](docs/roadmap.md).
+v0.1 (in progress) — the real scaffolder. Renders all four surfaces into your chosen directory, wired up, with the generated project's own CI green. All four target languages — **Python, Go, Rust, and Node** — are complete and verified end-to-end (build/check + lint + test + a live MCP stdio roundtrip). See [`docs/roadmap.md`](docs/roadmap.md).
 
 ## License
 

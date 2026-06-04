@@ -21,8 +21,8 @@ SHARED_DIR_NAME = "_shared"
 
 # Languages with a complete template tree under templates/<lang>/. Only list a
 # language here once every surface it ships actually builds and runs — an
-# advertised but half-built tree is worse than no tree. Node is next.
-LANGUAGES = ("python", "go", "rust")
+# advertised but half-built tree is worse than no tree.
+LANGUAGES = ("python", "go", "rust", "node")
 
 # Files that must keep their executable bit when written.
 _EXECUTABLE = {"install.sh"}
