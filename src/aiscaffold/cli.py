@@ -116,7 +116,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="aiscaffold",
         description="Bootstrap a full AI-native CLI stack in 30s, in the language you "
         "ship in: CLI + Claude Code plugin + skill + MCP server + brief command. "
-        "Pick a target with --lang (python, go).",
+        "Pick a target with --lang (python, go, rust).",
         epilog="Full docs at https://github.com/danishvirani/aiscaffold",
     )
     parser.add_argument("-V", "--version", action="version", version=f"aiscaffold {__version__}")

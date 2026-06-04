@@ -20,7 +20,7 @@ This reverses ADR-001's central positioning. It was made deliberately, with the 
 The brand is no longer "stdlib-only Python." It is now, per language:
 
 1. **One-line install.** Every generated project installs via `./install.sh` (and the curl path). Python writes a launcher; Go/Rust build a single binary; Node runs without a build step. The install command is still the first user experience and still the pitch.
-2. **No SDK in the generated MCP server.** Every language's MCP server is a hand-rolled stdio JSON-RPC loop over that language's standard JSON facility (`json`, `encoding/json`, etc.) — readable, auditable, zero third-party deps. This is the through-line that keeps the output honest across languages.
+2. **No MCP *SDK* in the generated server.** Every language's MCP server is a hand-rolled stdio JSON-RPC loop — readable, auditable, no protocol black box. The server uses that language's *de-facto-standard JSON library*: stdlib where one exists (`json`, `encoding/json`, JS `JSON`), and the universal community standard where it doesn't (Rust → `serde`/`serde_json`). The line we hold is "no MCP SDK," not "zero dependencies absolutely" — hand-rolling a JSON parser in Rust's std would be brittle make-work that serves no one. (Decided 2026-06-04 when adding the Rust target; the original draft of this ADR said "zero third-party deps," which over-reached.)
 3. **The scaffolder itself stays stdlib-only Python.** aiscaffold is still `argparse` + a hand-rolled `{{var}}`/`{{#if}}` renderer + `pathlib`. Eating our own cooking on the *tool* costs nothing and keeps `pipx run aiscaffold` instant.
 
 So the wedge moves from "one language, zero deps" to "any language, idiomatic, with a dependency-free MCP server and a one-line install."

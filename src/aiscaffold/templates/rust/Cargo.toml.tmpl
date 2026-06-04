@@ -1,0 +1,16 @@
+[package]
+name = "{{name}}"
+version = "0.0.1"
+edition = "2021"
+description = "{{description}}"
+license = "{{license}}"
+authors = ["{{author}}"]
+
+[[bin]]
+name = "{{name}}"
+path = "src/main.rs"
+
+[dependencies]
+{{#if with_mcp}}
+serde_json = "1"
+{{/if}}

@@ -1,0 +1,146 @@
+//! A hand-rolled stdio JSON-RPC MCP server for {{name}}.
+//!
+//! It speaks newline-delimited JSON-RPC over stdin/stdout (the MCP stdio
+//! transport), handles initialize, tools/list, and tools/call, and exposes one
+//! tool that mirrors the `{{name}} {{command}}` command. There is no MCP SDK —
+//! just `serde_json` for parsing and building messages.
+//!
+//! Add a tool: append to `tools` and add a match arm in `dispatch`.
+
+use std::io::{self, BufRead, Write};
+
+use serde_json::{json, Value};
+
+const PROTOCOL_VERSION: &str = "2025-06-18";
+const SERVER_NAME: &str = "{{name}}";
+const SERVER_VERSION: &str = "0.0.1";
+
+// The tools this server exposes. Mirror your CLI commands here.
+fn tools() -> Value {
+    json!([
+        {
+            "name": "{{command}}",
+            "description": "The example tool — replace with your own logic.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Who to greet."}
+                }
+            }
+        }
+    ])
+}
+
+// dispatch returns the text result for a tool call, or an error message.
+fn dispatch(name: &str, args: &Value) -> Result<String, String> {
+    match name {
+        "{{command}}" => {
+            let who = args.get("name").and_then(|v| v.as_str()).unwrap_or("world");
+            Ok(format!("Hello, {}, from {{name}}.", who))
+        }
+        other => Err(format!("unknown tool: {}", other)),
+    }
+}
+
+fn result(id: &Value, res: Value) -> Value {
+    json!({"jsonrpc": "2.0", "id": id, "result": res})
+}
+
+fn error(id: &Value, code: i64, message: &str) -> Value {
+    json!({"jsonrpc": "2.0", "id": id, "error": {"code": code, "message": message}})
+}
+
+// handle maps one JSON-RPC request line to an optional response. None means
+// "write nothing" (notifications and unparseable lines).
+fn handle(line: &str) -> Option<Value> {
+    let req: Value = serde_json::from_str(line).ok()?;
+    let id = req.get("id").cloned().unwrap_or(Value::Null);
+    let method = req.get("method").and_then(|v| v.as_str()).unwrap_or("");
+
+    match method {
+        "initialize" => Some(result(
+            &id,
+            json!({
+                "protocolVersion": PROTOCOL_VERSION,
+                "capabilities": {"tools": {}},
+                "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION}
+            }),
+        )),
+        "notifications/initialized" => None,
+        "ping" => Some(result(&id, json!({}))),
+        "tools/list" => Some(result(&id, json!({"tools": tools()}))),
+        "tools/call" => {
+            let params = req.get("params").cloned().unwrap_or(Value::Null);
+            let name = params.get("name").and_then(|v| v.as_str()).unwrap_or("");
+            let args = params.get("arguments").cloned().unwrap_or(json!({}));
+            match dispatch(name, &args) {
+                Ok(text) => Some(result(
+                    &id,
+                    json!({"content": [{"type": "text", "text": text}]}),
+                )),
+                Err(msg) => Some(error(&id, -32602, &msg)),
+            }
+        }
+        _ => {
+            if id.is_null() {
+                None
+            } else {
+                Some(error(&id, -32601, &format!("method not found: {}", method)))
+            }
+        }
+    }
+}
+
+// serve runs the read-eval-respond loop until stdin closes. Returns an exit code.
+pub fn serve() -> i32 {
+    let stdin = io::stdin();
+    let stdout = io::stdout();
+    let mut out = stdout.lock();
+    for line in stdin.lock().lines() {
+        let line = match line {
+            Ok(l) => l,
+            Err(_) => break,
+        };
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if let Some(resp) = handle(trimmed) {
+            let _ = writeln!(out, "{}", resp);
+            let _ = out.flush();
+        }
+    }
+    0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn initialize_reports_server_name() {
+        let resp = handle(r#"{"jsonrpc":"2.0","id":1,"method":"initialize"}"#).unwrap();
+        assert_eq!(resp["result"]["serverInfo"]["name"], SERVER_NAME);
+    }
+
+    #[test]
+    fn tools_list_and_call() {
+        let listed = handle(r#"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#).unwrap();
+        let names: Vec<&str> = listed["result"]["tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|t| t["name"].as_str())
+            .collect();
+        assert!(names.contains(&"{{command}}"));
+
+        let call = r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"{{command}}","arguments":{}}}"#;
+        let called = handle(call).unwrap();
+        assert_eq!(called["result"]["content"][0]["type"], "text");
+    }
+
+    #[test]
+    fn notification_has_no_response() {
+        assert!(handle(r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#).is_none());
+    }
+}

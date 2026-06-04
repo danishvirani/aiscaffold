@@ -5,8 +5,9 @@
 Run it:
 
 ```bash
-pipx run aiscaffold my-tool            # Python (default)
-pipx run aiscaffold my-tool --lang go  # Go
+pipx run aiscaffold my-tool              # Python (default)
+pipx run aiscaffold my-tool --lang go    # Go
+pipx run aiscaffold my-tool --lang rust  # Rust
 ```
 
 Or curl-install the dev build:
@@ -40,7 +41,7 @@ my-tool --help
 |----------|-----|------------|--------------|
 | `python` (default) | `argparse` | hand-rolled stdio JSON-RPC | stdlib only |
 | `go` | stdlib `flag`-free dispatch | `encoding/json` stdio JSON-RPC | stdlib only |
-| `rust` | _coming next_ | | |
+| `rust` | `std::env` match dispatch | hand-rolled stdio JSON-RPC | `serde_json` (MCP only) |
 | `node` | _coming next_ | | |
 
 Each language emits a complete, idiomatic project that builds, tests, lints, and runs its own CI green out of the box. The Claude Code plugin and bootstrap skill are language-agnostic and shared across every target.
@@ -49,7 +50,7 @@ Each language emits a complete, idiomatic project that builds, tests, lints, and
 
 - **CLI** — a native binary for the chosen language with one working command. Add more by copying the pattern.
 - **Claude Code plugin** — `plugins/<name>/` with a manifest, a slash command per CLI command, and an auto-loading skill. The plugin's MCP entry points at `<name> mcp`, so it works identically regardless of language.
-- **MCP server** — a hand-rolled stdio JSON-RPC server with no SDK and no third-party deps. Run it with `<name> mcp`.
+- **MCP server** — a hand-rolled stdio JSON-RPC server with no MCP SDK. It uses each language's de-facto-standard JSON library (stdlib `json` / `encoding/json` where one exists; `serde_json` for Rust). Run it with `<name> mcp`.
 - **brief command** — every scaffolded tool ships `<name> brief`, which prints a Markdown context block you paste at the start of an AI session. The pattern is the stickiness: every session starts faster.
 
 Skip any surface with `--no-plugin`, `--no-mcp`, `--no-skill`. Interactive prompts and flag-based invocation both work.
@@ -70,7 +71,7 @@ aiscaffold --help
 
 ## Status
 
-v0.1 (in progress) — the real scaffolder. Renders all four surfaces into your chosen directory, wired up, with the generated project's own CI green. Python and Go are complete and verified end-to-end (build/lint/test + a live MCP stdio roundtrip); Rust and Node are next. See [`docs/roadmap.md`](docs/roadmap.md).
+v0.1 (in progress) — the real scaffolder. Renders all four surfaces into your chosen directory, wired up, with the generated project's own CI green. Python, Go, and Rust are complete and verified end-to-end (build/lint/test + a live MCP stdio roundtrip); Node is next. See [`docs/roadmap.md`](docs/roadmap.md).
 
 ## License
 

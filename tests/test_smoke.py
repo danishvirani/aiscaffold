@@ -2,8 +2,8 @@
 
 Covers the CLI surface, the render core (variables + conditionals), and the
 scaffold orchestrator across every supported language (full bundle + surface
-pruning). For Python it compiles the output; for Go it actually builds, vets,
-tests, runs the CLI, and exercises a live MCP stdio roundtrip.
+pruning). For Python it compiles the output; for Go and Rust it actually
+builds, lints, tests, runs the CLI, and exercises a live MCP stdio roundtrip.
 """
 
 import io
@@ -300,4 +300,68 @@ def test_go_no_mcp_prunes_and_still_builds(tmp_path):
     r = subprocess.run(
         ["go", "build", "./..."], cwd=out, capture_output=True, text=True, env=_go_env()
     )
+    assert r.returncode == 0, r.stderr
+
+
+# --- Rust end-to-end (skipped when the toolchain is absent) --------------
+
+_CARGO = shutil.which("cargo")
+
+
+@pytest.mark.skipif(_CARGO is None, reason="cargo not installed")
+def test_rust_full_bundle_fmt_builds_tests(tmp_path):
+    out = _scaffold(tmp_path, lang="rust")
+    assert (out / "Cargo.toml").exists()
+    assert (out / "src/main.rs").exists()
+    assert (out / "src/mcp.rs").exists()
+    assert (out / "README.md").exists()
+    assert (out / "install.sh").exists()
+    assert (out / ".github/workflows/ci.yml").exists()
+    # Shared surfaces come along for the ride.
+    assert (out / "LICENSE").exists()
+    assert (out / "plugins/my-tool/.claude-plugin/plugin.json").exists()
+    assert (out / "plugins/my-tool/commands/scan.md").exists()
+    # serde_json is declared only when the MCP server is present.
+    assert "serde_json" in (out / "Cargo.toml").read_text()
+
+    fmt = subprocess.run(["cargo", "fmt", "--check"], cwd=out, capture_output=True, text=True)
+    assert fmt.returncode == 0, f"cargo fmt flagged:\n{fmt.stdout}\n{fmt.stderr}"
+    for cmd in (["cargo", "build"], ["cargo", "test"]):
+        r = subprocess.run(cmd, cwd=out, capture_output=True, text=True)
+        assert r.returncode == 0, f"{cmd}\n{r.stdout}\n{r.stderr}"
+
+
+@pytest.mark.skipif(_CARGO is None, reason="cargo not installed")
+def test_rust_binary_runs_cli_and_mcp(tmp_path):
+    out = _scaffold(tmp_path, lang="rust")
+    build = subprocess.run(["cargo", "build", "--release"], cwd=out, capture_output=True, text=True)
+    assert build.returncode == 0, build.stderr
+    binary = out / "target/release/my-tool"
+
+    ran = subprocess.run([str(binary), "scan"], capture_output=True, text=True)
+    assert ran.returncode == 0 and ran.stdout.strip()
+
+    brief = subprocess.run([str(binary), "brief"], capture_output=True, text=True)
+    assert "my-tool" in brief.stdout
+
+    mcp = subprocess.run(
+        [str(binary), "mcp"],
+        input='{"jsonrpc": "2.0", "id": 1, "method": "initialize"}\n',
+        capture_output=True,
+        text=True,
+    )
+    assert '"serverInfo"' in mcp.stdout
+    assert "my-tool" in mcp.stdout
+
+
+@pytest.mark.skipif(_CARGO is None, reason="cargo not installed")
+def test_rust_no_mcp_prunes_and_still_builds(tmp_path):
+    out = _scaffold(tmp_path, lang="rust", disable=["--no-mcp"])
+    assert not (out / "src/mcp.rs").exists()
+    main_src = (out / "src/main.rs").read_text()
+    assert "mod mcp" not in main_src
+    assert "mcp::serve" not in main_src
+    # No MCP server means no JSON dependency at all — back to zero deps.
+    assert "serde_json" not in (out / "Cargo.toml").read_text()
+    r = subprocess.run(["cargo", "build"], cwd=out, capture_output=True, text=True)
     assert r.returncode == 0, r.stderr

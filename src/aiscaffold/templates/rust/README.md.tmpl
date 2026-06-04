@@ -1,0 +1,44 @@
+# {{name}}
+
+> {{description}}
+
+Install:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/{{author}}/{{name}}/main/install.sh | sh
+```
+
+A single release binary built with `cargo`. The only dependency is
+[`serde_json`](https://crates.io/crates/serde_json) for the MCP server — no MCP
+SDK, no framework.
+
+## Usage
+
+```bash
+{{name}} {{command}}          # the example command — replace with your own
+{{name}} brief                # print an AI session-bootstrap context block
+{{name}} version
+{{name}} help
+```
+
+## The four surfaces
+
+Scaffolded by [aiscaffold](https://github.com/danishvirani/aiscaffold). Everything is wired up:
+
+- **CLI** — `src/main.rs`, a small Rust binary. Add commands by adding a match arm to `run`.
+- **Claude Code plugin** — `plugins/{{name}}/`: a manifest, a slash command per CLI command, and an auto-loading bootstrap skill. Use it with `claude --plugin-dir ./plugins/{{name}}` or symlink it into `~/.claude/plugins/`.
+- **MCP server** — `src/mcp.rs`, a hand-rolled stdio JSON-RPC server using only `serde_json`. Run it with `{{name}} mcp`.
+- **brief command** — `{{name}} brief` prints a Markdown context block to paste at the start of an AI session, so the agent starts with the project's shape already loaded.
+
+## Develop
+
+```bash
+./install.sh                 # cargo build --release → ~/.local/bin/{{name}}
+cargo test
+cargo clippy --all-targets
+cargo fmt --check            # should print nothing
+```
+
+## License
+
+{{license}}. See [LICENSE](LICENSE).
