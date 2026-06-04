@@ -1,12 +1,18 @@
-# ADR-001: create-ai-cli is stdlib-only (and so is everything it generates)
+# ADR-001: aiscaffold is stdlib-only (and so is everything it generates)
 
 Date: 2026-06-03
-Status: Accepted
+Status: Superseded by [ADR-002](ADR-002-multi-language.md) (2026-06-04)
 Deciders: Danish Virani
+
+> **Superseded.** This ADR scoped aiscaffold to a single language (Python) with a
+> stdlib-only-as-brand wedge. ADR-002 broadens the product to multiple target
+> languages. The "one-line install, no SDK in the generated MCP server" principle
+> survives per-language; the "Python-only / stdlib-as-the-whole-pitch" framing does
+> not. Kept verbatim below as the historical record.
 
 ## Context
 
-create-ai-cli is a scaffolder. A developer runs it once — `pipx run create-ai-cli my-tool` — and it writes a full AI-native CLI stack to disk: a CLI binary, a Claude Code plugin, a stdio MCP server, an auto-loading skill, and a `brief` command. It runs on a developer's laptop, makes no network calls, and writes plain files.
+aiscaffold is a scaffolder. A developer runs it once — `pipx run aiscaffold my-tool` — and it writes a full AI-native CLI stack to disk: a CLI binary, a Claude Code plugin, a stdio MCP server, an auto-loading skill, and a `brief` command. It runs on a developer's laptop, makes no network calls, and writes plain files.
 
 There are two obvious dependency stacks, and the decision applies to **two layers**: the scaffolder itself, and the code it generates.
 
@@ -14,10 +20,10 @@ There are two obvious dependency stacks, and the decision applies to **two layer
 
 **Option B — Python standard library only, both layers.** Scaffolder: `argparse` + `string.Template` + `pathlib` + `shutil` + ANSI escapes. Generated MCP server: hand-rolled stdio JSON-RPC over `sys.stdin` / `sys.stdout` with `json`. Generated CLI: `argparse`.
 
-The AI tooling space in 2026 favors Option A. The median install command for a competing tool — and for the scaffolds those tools generate — is a wall of `pip install` or a Node toolchain. I want create-ai-cli to install with:
+The AI tooling space in 2026 favors Option A. The median install command for a competing tool — and for the scaffolds those tools generate — is a wall of `pip install` or a Node toolchain. I want aiscaffold to install with:
 
 ```
-pipx run create-ai-cli my-tool
+pipx run aiscaffold my-tool
 ```
 
 and I want what it generates to install with:
@@ -40,7 +46,7 @@ This is the wedge. Anthropic's tooling assumes the TS SDK or FastMCP — both ca
 
 **Good:**
 
-1. The pitch IS the install command, on both layers. `pipx run create-ai-cli`, then `curl | sh` for the generated tool. One shell line each, forever.
+1. The pitch IS the install command, on both layers. `pipx run aiscaffold`, then `curl | sh` for the generated tool. One shell line each, forever.
 2. The scaffolder is honest. A generator that drags in `jinja2` while preaching zero-deps is a lie users will catch.
 3. The generated MCP server is a single readable file (~150 lines of stdio JSON-RPC), not an SDK black box. Authors learn the protocol instead of importing it.
 4. Cold start is the interpreter's startup (~30ms). No import-time framework cost in the scaffolder or the scaffold.

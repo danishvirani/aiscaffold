@@ -1,0 +1,111 @@
+// A hand-rolled stdio JSON-RPC MCP server for {{name}}.
+//
+// It speaks newline-delimited JSON-RPC over stdin/stdout (the MCP stdio
+// transport), handles initialize, tools/list, and tools/call, and exposes one
+// tool that mirrors the `{{name}} {{command}}` command. There is no MCP SDK and
+// no dependency — just the built-in `JSON` and `node:readline`.
+//
+// Add a tool: append to `tools` and add a case to `dispatch`.
+
+import { createInterface } from "node:readline";
+
+const PROTOCOL_VERSION = "2025-06-18";
+const SERVER_NAME = "{{name}}";
+const SERVER_VERSION = "0.0.1";
+
+// The tools this server exposes. Mirror your CLI commands here.
+const tools = [
+  {
+    name: "{{command}}",
+    description: "The example tool — replace with your own logic.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Who to greet." },
+      },
+    },
+  },
+];
+
+// dispatch returns the text result for a tool call. Mirror your CLI here.
+function dispatch(name, args) {
+  switch (name) {
+    case "{{command}}": {
+      const who = (args && args.name) || "world";
+      return `Hello, ${who}, from {{name}}.`;
+    }
+    default:
+      throw new Error(`unknown tool: ${name}`);
+  }
+}
+
+// handle maps one JSON-RPC request line to a response object, or null for
+// notifications and unparseable lines (write nothing).
+export function handle(line) {
+  let req;
+  try {
+    req = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  const id = req.id ?? null;
+
+  switch (req.method) {
+    case "initialize":
+      return {
+        jsonrpc: "2.0",
+        id,
+        result: {
+          protocolVersion: PROTOCOL_VERSION,
+          capabilities: { tools: {} },
+          serverInfo: { name: SERVER_NAME, version: SERVER_VERSION },
+        },
+      };
+    case "notifications/initialized":
+      return null;
+    case "ping":
+      return { jsonrpc: "2.0", id, result: {} };
+    case "tools/list":
+      return { jsonrpc: "2.0", id, result: { tools } };
+    case "tools/call": {
+      const params = req.params || {};
+      try {
+        const text = dispatch(params.name, params.arguments || {});
+        return {
+          jsonrpc: "2.0",
+          id,
+          result: { content: [{ type: "text", text }] },
+        };
+      } catch (err) {
+        return { jsonrpc: "2.0", id, error: { code: -32602, message: err.message } };
+      }
+    }
+    default:
+      if (id === null) {
+        return null;
+      }
+      return {
+        jsonrpc: "2.0",
+        id,
+        error: { code: -32601, message: `method not found: ${req.method}` },
+      };
+  }
+}
+
+// serve runs the read-eval-respond loop until stdin closes. Resolves an exit code.
+export function serve() {
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: process.stdin });
+    rl.on("line", (line) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        return;
+      }
+      const resp = handle(trimmed);
+      if (resp !== null) {
+        process.stdout.write(`${JSON.stringify(resp)}\n`);
+      }
+    });
+    rl.on("close", () => resolve(0));
+  });
+}

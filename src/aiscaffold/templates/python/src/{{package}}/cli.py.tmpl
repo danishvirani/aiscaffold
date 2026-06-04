@@ -1,0 +1,89 @@
+"""{{name}} CLI entry point.
+
+Stdlib-only: argparse + print. Add a command by copying the `{{command}}`
+pattern below and wiring a sub-parser in `build_parser`.
+"""
+
+import argparse
+import sys
+
+from {{package}} import __version__
+
+BRIEF = """\
+# {{name}} — session brief
+
+{{description}}
+
+## Commands
+- `{{name}} {{command}}` — the example command (replace with your own)
+- `{{name}} brief` — print this context block
+{{#if with_mcp}}
+- `{{name}} mcp` — run the stdio MCP server
+{{/if}}
+
+## How to extend
+Add a sub-parser in `build_parser` and a `cmd_<name>` handler in
+`src/{{package}}/cli.py`, then mirror the command in
+`plugins/{{name}}/commands/`.
+{{#if with_mcp}}
+Also register the tool in `src/{{package}}/mcp.py` (TOOLS + _dispatch).
+{{/if}}
+"""
+
+
+def cmd_{{command}}(args: argparse.Namespace) -> int:
+    print("Hello from {{name}}. Replace this with your command's logic.")
+    return 0
+
+
+def cmd_brief(args: argparse.Namespace) -> int:
+    print(BRIEF)
+    return 0
+
+
+{{#if with_mcp}}
+def cmd_mcp(args: argparse.Namespace) -> int:
+    from {{package}}.mcp import serve
+
+    return serve()
+
+
+{{/if}}
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="{{name}}",
+        description="{{description}}",
+    )
+    parser.add_argument(
+        "-V",
+        "--version",
+        action="version",
+        version="{{name}} " + __version__,
+    )
+    sub = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
+
+    p_cmd = sub.add_parser(
+        "{{command}}",
+        help="The example command — replace me",
+    )
+    p_cmd.set_defaults(func=cmd_{{command}})
+
+    p_brief = sub.add_parser("brief", help="Print an AI session-bootstrap context block")
+    p_brief.set_defaults(func=cmd_brief)
+{{#if with_mcp}}
+
+    p_mcp = sub.add_parser("mcp", help="Run the stdio MCP server")
+    p_mcp.set_defaults(func=cmd_mcp)
+{{/if}}
+
+    return parser
+
+
+def main(argv=None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

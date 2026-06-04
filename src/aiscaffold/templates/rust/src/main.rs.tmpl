@@ -1,0 +1,118 @@
+//! {{name}} — {{description}}
+//!
+//! A small Rust CLI. Run `{{name}} help` for the command list.
+//! Add a command by adding a match arm in `run` and a matching slash command
+//! under `plugins/{{name}}/commands/`.
+
+use std::env;
+use std::process;
+
+{{#if with_mcp}}
+mod mcp;
+
+{{/if}}
+const NAME: &str = "{{name}}";
+const VERSION: &str = "0.0.1";
+
+const GREETING: &str = "Hello from {{name}}. Replace this with your command's logic.";
+
+const USAGE: &str = "\
+{{name}} — {{description}}
+
+Usage: {{name}} <command>
+
+Commands:
+  {{command}}   the example command — replace with your own
+  brief   print an AI session-bootstrap context block
+{{#if with_mcp}}
+  mcp     run the stdio MCP server
+{{/if}}
+  version print the version
+";
+
+const BRIEF: &str = "\
+# {{name}} — session brief
+
+{{description}}
+
+## Commands
+- `{{name}} {{command}}` — the example command (replace with your own)
+- `{{name}} brief` — print this context block
+{{#if with_mcp}}
+- `{{name}} mcp` — run the stdio MCP server
+{{/if}}
+
+## How to extend
+Add a match arm in `run` in `src/main.rs` and a matching slash command under
+`plugins/{{name}}/commands/`.
+{{#if with_mcp}}
+Also register the tool in `src/mcp.rs` (the `tools` list and `dispatch`).
+{{/if}}
+";
+
+// run maps argv (without the program name) to (output, exit_code).
+fn run(args: &[String]) -> (String, i32) {
+    let cmd = match args.first() {
+        Some(c) => c.as_str(),
+        None => return (USAGE.to_string(), 2),
+    };
+    match cmd {
+        "{{command}}" => (GREETING.to_string(), 0),
+        "brief" => (BRIEF.to_string(), 0),
+        "version" | "-V" | "--version" => (format!("{} {}", NAME, VERSION), 0),
+{{#if with_mcp}}
+        "mcp" => (String::new(), mcp::serve()),
+{{/if}}
+        "help" | "-h" | "--help" => (USAGE.to_string(), 0),
+        other => (format!("{}: unknown command {:?}", NAME, other), 2),
+    }
+}
+
+fn main() {
+    let args: Vec<String> = env::args().skip(1).collect();
+    let (out, code) = run(&args);
+    if !out.is_empty() {
+        if out.ends_with('\n') {
+            print!("{}", out);
+        } else {
+            println!("{}", out);
+        }
+    }
+    process::exit(code);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn s(items: &[&str]) -> Vec<String> {
+        items.iter().map(|x| x.to_string()).collect()
+    }
+
+    #[test]
+    fn command_runs() {
+        let (out, code) = run(&s(&["{{command}}"]));
+        assert_eq!(code, 0);
+        assert!(!out.is_empty());
+    }
+
+    #[test]
+    fn brief_mentions_name() {
+        let (out, code) = run(&s(&["brief"]));
+        assert_eq!(code, 0);
+        assert!(out.contains(NAME));
+    }
+
+    #[test]
+    fn version_prints_version() {
+        let (out, code) = run(&s(&["--version"]));
+        assert_eq!(code, 0);
+        assert!(out.contains(VERSION));
+    }
+
+    #[test]
+    fn unknown_command_exits_two() {
+        let (_out, code) = run(&s(&["nope"]));
+        assert_eq!(code, 2);
+    }
+}

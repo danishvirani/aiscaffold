@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# {{name}} installer — builds the binary and installs it to ~/.local/bin/{{name}}.
+# Re-run after pulling changes to rebuild.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LAUNCHER_DIR="${HOME}/.local/bin"
+
+if ! command -v go >/dev/null 2>&1; then
+  echo "✗ Go is not installed. Get it at https://go.dev/dl/ and re-run." >&2
+  exit 1
+fi
+
+mkdir -p "${LAUNCHER_DIR}"
+( cd "${REPO_ROOT}" && go build -o "${LAUNCHER_DIR}/{{name}}" ./cmd/{{name}} )
+
+echo "✓ Installed {{name}} → ${LAUNCHER_DIR}/{{name}}"
+echo ""
+
+if ! command -v {{name}} >/dev/null 2>&1; then
+  echo "⚠ ${LAUNCHER_DIR} is not on your PATH."
+  echo "  Add to your shell profile:  export PATH=\"\$HOME/.local/bin:\$PATH\""
+  echo ""
+fi
+
+echo "Try it:  {{name}} {{command}}"
+echo "         {{name}} brief"

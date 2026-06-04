@@ -1,7 +1,7 @@
-# create-ai-cli — build roadmap
+# aiscaffold — build roadmap
 
 Date: 2026-06-03
-Status: v0.0 (scaffold)
+Status: v0.1.0 (released) — all four language targets complete
 
 Engineering plan, not a marketing roadmap. Each version is a real, shippable artifact a stranger can install and use. Ship when the DoD line below is true.
 
@@ -10,15 +10,15 @@ Engineering plan, not a marketing roadmap. Each version is a real, shippable art
 ## v0.0 — scaffold (current)
 
 **What works:**
-- `create-ai-cli --help` renders, shows the `name` positional and `--no-plugin` / `--no-mcp` / `--no-skill` flags
-- `create-ai-cli --version` prints `create-ai-cli 0.0.1`
-- `create-ai-cli <name>` exits 1 with "scaffolder not yet implemented" + roadmap pointer
+- `aiscaffold --help` renders, shows the `name` positional and `--no-plugin` / `--no-mcp` / `--no-skill` flags
+- `aiscaffold --version` prints `aiscaffold 0.0.1`
+- `aiscaffold <name>` exits 1 with "scaffolder not yet implemented" + roadmap pointer
 - `pip install -e ".[dev]"` works
-- `./install.sh` writes a launcher at `~/.local/bin/create-ai-cli`
+- `./install.sh` writes a launcher at `~/.local/bin/aiscaffold`
 - CI passes: ruff lint + ruff format + pytest on Python 3.10 / 3.11 / 3.12 across Ubuntu + macOS
 
 **What does NOT work yet:**
-- No templates are rendered — there is no `src/create_ai_cli/templates/` yet
+- No templates are rendered — there is no `src/aiscaffold/templates/` yet
 - No file is written to disk; the scaffolder is a stub
 
 **DoD:** ✅ shipped.
@@ -29,11 +29,13 @@ Engineering plan, not a marketing roadmap. Each version is a real, shippable art
 
 The first version someone can actually use. One command produces a working four-surface AI CLI.
 
-**DoD:** `pipx run create-ai-cli my-tool` produces a working CLI + Claude Code plugin + MCP server + skill + brief + install.sh + CI, wired up. 60 seconds from invocation to "Claude can use my tool." Final acceptance: `pipx run create-ai-cli redink` reproduces redink's v0.0 shape.
+> **Update (2026-06-04): multi-language.** Per [ADR-002](decisions/ADR-002-multi-language.md), aiscaffold now targets multiple languages via `--lang`, superseding the stdlib-only-Python wedge of ADR-001. Architecture: `templates/_shared/` (language-agnostic plugin + skill + LICENSE) merged with `templates/<lang>/` per-language trees. **All four target languages — Python, Go, Rust, and Node — are complete and verified end-to-end** (each builds/checks, lints, tests + a live MCP stdio roundtrip; wheel packaging verified incl. dot-dir files). Rust uses `serde_json` for its MCP server (no MCP SDK), per [ADR-002](decisions/ADR-002-multi-language.md), gated behind `--no-mcp` (zero deps without the server); Node is plain ESM with no build step and zero dependencies (runtime *and* dev — built-in `JSON` + `node:readline` + the `node --test` runner). `--lang` advertises only languages with a complete tree.
+
+**DoD:** `pipx run aiscaffold my-tool` produces a working CLI + Claude Code plugin + MCP server + skill + brief + install.sh + CI, wired up, in the chosen language. 60 seconds from invocation to "Claude can use my tool." Final acceptance: `pipx run aiscaffold redink` reproduces redink's v0.0 shape (Python).
 
 ### Architecture
 
-- Templates in `src/create_ai_cli/templates/` as plain files, shipped as package data.
+- Templates in `src/aiscaffold/templates/` as plain files, shipped as package data.
 - Stdlib rendering: `string.Template` or hand-rolled `{{var}}` substitution. No `jinja2`.
 - A renderer that walks the template tree, substitutes variables, and writes into the chosen output dir.
 - All four surfaces by default; `--no-plugin`, `--no-mcp`, `--no-skill` prune the tree.
@@ -49,7 +51,7 @@ The first version someone can actually use. One command produces a working four-
 6. **Project-meta templates** — `install.sh`, `pyproject.toml`, `.github/workflows/ci.yml`, `README.md`, `.gitignore`, `LICENSE` (MIT), `tests/test_smoke.py`.
 7. **Interactive mode** — when invoked with just a name (or no name), prompt for description, commands, license. Flag-based path stays for scripting.
 8. **Post-scaffold output** — print the one-line install instruction, the "add to Claude Code" instruction (symlink to `~/.claude/plugins/`), and the "use as MCP server" instruction.
-9. **Dogfood test** — `create-ai-cli redink` in CI, asserting the output matches redink's v0.0 file shape.
+9. **Dogfood test** — `aiscaffold redink` in CI, asserting the output matches redink's v0.0 file shape.
 
 **README diff when v0.1 ships:** drop "scaffold" framing, add a sub-30-second screencast gif, bump version.
 
@@ -59,12 +61,12 @@ The first version someone can actually use. One command produces a working four-
 
 **DoD:**
 1. Generated tools pass their own CI on first push (the scaffold's CI is green out of the box).
-2. `create-ai-cli` supports adding a command to an existing scaffold without re-running the whole generator.
+2. `aiscaffold` supports adding a command to an existing scaffold without re-running the whole generator.
 
 **Commits:**
-1. **`create-ai-cli add-command <cmd>`** — append a command to an existing scaffold: CLI subcommand stub, plugin command markdown, MCP tool entry.
+1. **`aiscaffold add-command <cmd>`** — append a command to an existing scaffold: CLI subcommand stub, plugin command markdown, MCP tool entry.
 2. **Richer brief template** — the generated `brief` emits project structure, command list, and a "how to extend" section, not just a stub.
-3. **`uvx` parity** — verify and document `uvx create-ai-cli` alongside `pipx run`.
+3. **`uvx` parity** — verify and document `uvx aiscaffold` alongside `pipx run`.
 4. **Screencast + landing** — sub-30-second demo gif in the README; a single-page landing.
 5. **Template lint** — a CI job that scaffolds, then runs the generated project's own ruff + pytest, catching template rot.
 
@@ -75,12 +77,12 @@ The first version someone can actually use. One command produces a working four-
 Template rot kills scaffolders in 2-3 quarters: plugin manifest schema, MCP APIs, and Claude Code conventions change quarterly. A scaffolder that emits stale templates becomes worse than nothing.
 
 **DoD:**
-- `create-ai-cli upgrade` diffs a user's existing scaffold against the current templates and applies non-conflicting updates, flagging conflicts for manual resolution.
+- `aiscaffold upgrade` diffs a user's existing scaffold against the current templates and applies non-conflicting updates, flagging conflicts for manual resolution.
 - Templates pin against a specific Claude Code / MCP convention version recorded in the generated manifest.
 
 **Commits:**
-1. **Version-stamp generated scaffolds** — record the create-ai-cli version + template version in the generated `pyproject.toml` / manifest.
-2. **`create-ai-cli upgrade` core** — three-way diff (original template, current template, user's file); clean-apply the non-conflicting hunks.
+1. **Version-stamp generated scaffolds** — record the aiscaffold version + template version in the generated `pyproject.toml` / manifest.
+2. **`aiscaffold upgrade` core** — three-way diff (original template, current template, user's file); clean-apply the non-conflicting hunks.
 3. **Conflict reporting** — list files needing manual merge, with the template diff inline.
 4. **`docs/upgrading.md`** — the upgrade workflow, documented.
 
@@ -91,7 +93,7 @@ Template rot kills scaffolders in 2-3 quarters: plugin manifest schema, MCP APIs
 - **More languages** — a Go single-binary backend option; deferred because Node/TS is already well-served by Anthropic's tooling and Python stdlib is the wedge.
 - **Marketplace submission flow** — generate the marketplace manifest + a `submit` helper.
 - **Hooks + agents surfaces** — extend beyond the four core surfaces once they're rock-solid.
-- **PyPI publish of the scaffold** — `pipx run` stays canonical; `pipx install create-ai-cli` as fallback.
+- **PyPI publish of the scaffold** — `pipx run` stays canonical; `pipx install aiscaffold` as fallback.
 
 ## What would make us slow down or pivot
 

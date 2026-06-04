@@ -1,0 +1,71 @@
+package mcp
+
+import (
+	"encoding/json"
+	"testing"
+)
+
+func TestInitialize(t *testing.T) {
+	resp, emit := Handle([]byte(`{"jsonrpc":"2.0","id":1,"method":"initialize"}`))
+	if !emit {
+		t.Fatal("initialize should produce a response")
+	}
+	var parsed struct {
+		Result struct {
+			ServerInfo struct {
+				Name string `json:"name"`
+			} `json:"serverInfo"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(resp, &parsed); err != nil {
+		t.Fatalf("bad JSON: %v", err)
+	}
+	if parsed.Result.ServerInfo.Name != serverName {
+		t.Fatalf("serverInfo.name = %q, want %q", parsed.Result.ServerInfo.Name, serverName)
+	}
+}
+
+func TestToolsListAndCall(t *testing.T) {
+	resp, _ := Handle([]byte(`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`))
+	var listed struct {
+		Result struct {
+			Tools []struct {
+				Name string `json:"name"`
+			} `json:"tools"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(resp, &listed); err != nil {
+		t.Fatalf("bad JSON: %v", err)
+	}
+	found := false
+	for _, tl := range listed.Result.Tools {
+		if tl.Name == "{{command}}" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("tools/list did not include the example tool")
+	}
+
+	call := `{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"{{command}}","arguments":{}}}`
+	resp, _ = Handle([]byte(call))
+	var called struct {
+		Result struct {
+			Content []struct {
+				Type string `json:"type"`
+			} `json:"content"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(resp, &called); err != nil {
+		t.Fatalf("bad JSON: %v", err)
+	}
+	if len(called.Result.Content) == 0 || called.Result.Content[0].Type != "text" {
+		t.Fatal("tools/call did not return text content")
+	}
+}
+
+func TestNotificationHasNoResponse(t *testing.T) {
+	if _, emit := Handle([]byte(`{"jsonrpc":"2.0","method":"notifications/initialized"}`)); emit {
+		t.Fatal("notification should not produce a response")
+	}
+}

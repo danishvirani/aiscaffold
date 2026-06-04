@@ -1,0 +1,24 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import { handle } from "../../src/mcp.js";
+
+test("initialize reports the server name", () => {
+  const resp = handle('{"jsonrpc":"2.0","id":1,"method":"initialize"}');
+  assert.equal(resp.result.serverInfo.name, "{{name}}");
+});
+
+test("tools/list and tools/call", () => {
+  const listed = handle('{"jsonrpc":"2.0","id":2,"method":"tools/list"}');
+  const names = listed.result.tools.map((t) => t.name);
+  assert.ok(names.includes("{{command}}"));
+
+  const call =
+    '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"{{command}}","arguments":{}}}';
+  const called = handle(call);
+  assert.equal(called.result.content[0].type, "text");
+});
+
+test("notifications produce no response", () => {
+  assert.equal(handle('{"jsonrpc":"2.0","method":"notifications/initialized"}'), null);
+});

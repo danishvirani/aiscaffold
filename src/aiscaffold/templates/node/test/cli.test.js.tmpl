@@ -1,0 +1,27 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import { run } from "../src/cli.js";
+
+test("command runs", async () => {
+  const { out, code } = await run(["{{command}}"]);
+  assert.equal(code, 0);
+  assert.ok(out.length > 0);
+});
+
+test("brief mentions the tool name", async () => {
+  const { out, code } = await run(["brief"]);
+  assert.equal(code, 0);
+  assert.ok(out.includes("{{name}}"));
+});
+
+test("version prints the version", async () => {
+  const { out, code } = await run(["--version"]);
+  assert.equal(code, 0);
+  assert.ok(out.includes("0.0.1"));
+});
+
+test("unknown command exits 2", async () => {
+  const { code } = await run(["nope"]);
+  assert.equal(code, 2);
+});

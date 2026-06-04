@@ -1,0 +1,83 @@
+#!/usr/bin/env node
+// {{name}} — {{description}}
+//
+// A dependency-free Node CLI (plain ESM, no build step). Run `{{name}} help`
+// for the command list. Add a command by adding a case to `run` and a matching
+// slash command under `plugins/{{name}}/commands/`.
+
+import { fileURLToPath } from "node:url";
+
+const NAME = "{{name}}";
+const VERSION = "0.0.1";
+
+const GREETING = "Hello from {{name}}. Replace this with your command's logic.";
+
+const USAGE = `{{name}} — {{description}}
+
+Usage: {{name}} <command>
+
+Commands:
+  {{command}}   the example command — replace with your own
+  brief   print an AI session-bootstrap context block
+{{#if with_mcp}}
+  mcp     run the stdio MCP server
+{{/if}}
+  version print the version
+`;
+
+const BRIEF = `# {{name}} — session brief
+
+{{description}}
+
+## Commands
+- \`{{name}} {{command}}\` — the example command (replace with your own)
+- \`{{name}} brief\` — print this context block
+{{#if with_mcp}}
+- \`{{name}} mcp\` — run the stdio MCP server
+{{/if}}
+
+## How to extend
+Add a case in \`run\` in \`src/cli.js\` and a matching slash command under
+\`plugins/{{name}}/commands/\`.
+{{#if with_mcp}}
+Also register the tool in \`src/mcp.js\` (the \`tools\` list and \`dispatch\`).
+{{/if}}
+`;
+
+// run maps argv (without node + script) to { out, code }.
+export async function run(args) {
+  const cmd = args[0];
+  switch (cmd) {
+    case "{{command}}":
+      return { out: GREETING, code: 0 };
+    case "brief":
+      return { out: BRIEF, code: 0 };
+    case "version":
+    case "-V":
+    case "--version":
+      return { out: `${NAME} ${VERSION}`, code: 0 };
+{{#if with_mcp}}
+    case "mcp": {
+      const { serve } = await import("./mcp.js");
+      return { out: "", code: await serve() };
+    }
+{{/if}}
+    case "help":
+    case "-h":
+    case "--help":
+      return { out: USAGE, code: 0 };
+    case undefined:
+      return { out: USAGE, code: 2 };
+    default:
+      return { out: `${NAME}: unknown command ${JSON.stringify(cmd)}`, code: 2 };
+  }
+}
+
+// Run as a script (the `if __name__ == "__main__"` of ESM).
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const { out, code } = await run(process.argv.slice(2));
+  if (out) {
+    process.stdout.write(out.endsWith("\n") ? out : `${out}\n`);
+  }
+  process.exit(code);
+}

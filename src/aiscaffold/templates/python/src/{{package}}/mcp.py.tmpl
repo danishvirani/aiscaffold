@@ -1,0 +1,103 @@
+"""{{name}} MCP server — stdio JSON-RPC, no SDK.
+
+A complete Model Context Protocol server in the standard library. It speaks
+newline-delimited JSON-RPC over stdin/stdout (the MCP stdio transport),
+handles `initialize`, `tools/list`, and `tools/call`, and exposes one tool
+that calls the same code path as `{{name}} {{command}}`.
+
+Run it directly (`python -m {{package}}.mcp`) or via `{{name}} mcp`. Point a
+Claude Code MCP config at that command.
+
+Add a tool: append an entry to TOOLS and a branch in `_dispatch`.
+"""
+
+import json
+import sys
+
+from {{package}} import __version__
+
+PROTOCOL_VERSION = "2025-06-18"
+
+TOOLS = [
+    {
+        "name": "{{command}}",
+        "description": "The example tool — replace with your own logic.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"name": {"type": "string", "description": "Who to greet."}},
+        },
+    }
+]
+
+
+def _dispatch(tool: str, arguments: dict) -> str:
+    """Return the text result for a tool call. Mirror your CLI commands here."""
+    if tool == "{{command}}":
+        who = arguments.get("name", "world")
+        return f"Hello, {who}, from {{name}}."
+    raise ValueError(f"unknown tool: {tool}")
+
+
+def _result(request_id, result: dict) -> dict:
+    return {"jsonrpc": "2.0", "id": request_id, "result": result}
+
+
+def _error(request_id, code: int, message: str) -> dict:
+    return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
+
+
+def handle(request: dict):
+    """Map one JSON-RPC request to a response dict, or None for notifications."""
+    method = request.get("method")
+    request_id = request.get("id")
+    params = request.get("params") or {}
+
+    if method == "initialize":
+        return _result(
+            request_id,
+            {
+                "protocolVersion": PROTOCOL_VERSION,
+                "capabilities": {"tools": {}},
+                "serverInfo": {"name": "{{name}}", "version": __version__},
+            },
+        )
+    if method == "notifications/initialized":
+        return None
+    if method == "ping":
+        return _result(request_id, {})
+    if method == "tools/list":
+        return _result(request_id, {"tools": TOOLS})
+    if method == "tools/call":
+        tool = params.get("name", "")
+        arguments = params.get("arguments") or {}
+        try:
+            text = _dispatch(tool, arguments)
+        except ValueError as exc:
+            return _error(request_id, -32602, str(exc))
+        return _result(request_id, {"content": [{"type": "text", "text": text}]})
+
+    if request_id is None:
+        return None
+    return _error(request_id, -32601, f"method not found: {method}")
+
+
+def serve(stdin=None, stdout=None) -> int:
+    stdin = stdin or sys.stdin
+    stdout = stdout or sys.stdout
+    for line in stdin:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            request = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        response = handle(request)
+        if response is not None:
+            stdout.write(json.dumps(response) + "\n")
+            stdout.flush()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(serve())

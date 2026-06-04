@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "create-ai-cli"
-version = "0.0.1"
+name = "aiscaffold"
+version = "0.1.0"
 description = "Bootstrap a full AI-native CLI stack in 30s"
 readme = "README.md"
 license = { text = "MIT" }
@@ -25,18 +25,29 @@ classifiers = [
 ]
 
 [project.scripts]
-create-ai-cli = "create_ai_cli.cli:main"
+aiscaffold = "aiscaffold.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/danishvirani/create-ai-cli"
-Repository = "https://github.com/danishvirani/create-ai-cli"
-Issues = "https://github.com/danishvirani/create-ai-cli/issues"
+Homepage = "https://github.com/danishvirani/aiscaffold"
+Repository = "https://github.com/danishvirani/aiscaffold"
+Issues = "https://github.com/danishvirani/aiscaffold/issues"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.5"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+# setuptools' "**" globs do NOT descend into dot-directories, so files nested
+# under .github/ or .claude-plugin/ need explicit patterns or they silently
+# drop out of the wheel (a curl/pipx install would then emit broken scaffolds).
+aiscaffold = [
+  "templates/**/*",
+  "templates/**/.*",
+  "templates/**/.github/workflows/*",
+  "templates/**/.claude-plugin/*",
+]
 
 [tool.ruff]
 line-length = 100
