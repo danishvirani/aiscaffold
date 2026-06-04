@@ -37,13 +37,18 @@ class Context:
     license: str = "MIT"
     author: str = "Your Name"
     year: int = 2026
+    lang: str = "python"
     with_plugin: bool = True
     with_mcp: bool = True
     with_skill: bool = True
 
     @property
     def package(self) -> str:
-        """Python package name: kebab-case name with dashes as underscores."""
+        """Identifier-safe name: kebab-case name with dashes as underscores.
+
+        Used as the Python package name and the Rust crate / module name —
+        anywhere a language forbids dashes in an identifier.
+        """
         return self.name.replace("-", "_")
 
     @property
@@ -68,6 +73,7 @@ class Context:
             "license": self.license,
             "author": self.author,
             "year": str(self.year),
+            "lang": self.lang,
         }
 
 

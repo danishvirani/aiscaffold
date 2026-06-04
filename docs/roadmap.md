@@ -29,7 +29,9 @@ Engineering plan, not a marketing roadmap. Each version is a real, shippable art
 
 The first version someone can actually use. One command produces a working four-surface AI CLI.
 
-**DoD:** `pipx run aiscaffold my-tool` produces a working CLI + Claude Code plugin + MCP server + skill + brief + install.sh + CI, wired up. 60 seconds from invocation to "Claude can use my tool." Final acceptance: `pipx run aiscaffold redink` reproduces redink's v0.0 shape.
+> **Update (2026-06-04): multi-language.** Per [ADR-002](decisions/ADR-002-multi-language.md), aiscaffold now targets multiple languages via `--lang`, superseding the stdlib-only-Python wedge of ADR-001. Architecture: `templates/_shared/` (language-agnostic plugin + skill + LICENSE) merged with `templates/<lang>/` per-language trees. **Python and Go are complete and verified end-to-end** (each builds/lints/tests + a live MCP stdio roundtrip; wheel packaging verified incl. dot-dir files). **Rust and Node are the next two language trees.** `--lang` advertises only languages with a complete tree.
+
+**DoD:** `pipx run aiscaffold my-tool` produces a working CLI + Claude Code plugin + MCP server + skill + brief + install.sh + CI, wired up, in the chosen language. 60 seconds from invocation to "Claude can use my tool." Final acceptance: `pipx run aiscaffold redink` reproduces redink's v0.0 shape (Python).
 
 ### Architecture
 

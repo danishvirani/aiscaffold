@@ -1,0 +1,42 @@
+# {{name}}
+
+> {{description}}
+
+Install:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/{{author}}/{{name}}/main/install.sh | sh
+```
+
+A single static binary. No SDK, no runtime dependencies — just the Go standard library and `go build`.
+
+## Usage
+
+```bash
+{{name}} {{command}}          # the example command — replace with your own
+{{name}} brief                # print an AI session-bootstrap context block
+{{name}} version
+{{name}} help
+```
+
+## The four surfaces
+
+Scaffolded by [aiscaffold](https://github.com/danishvirani/aiscaffold). Everything is wired and stdlib-only:
+
+- **CLI** — `cmd/{{name}}/main.go`, a stdlib Go binary. Add commands by adding a case to `run()`.
+- **Claude Code plugin** — `plugins/{{name}}/`: a manifest, a slash command per CLI command, and an auto-loading bootstrap skill. Use it with `claude --plugin-dir ./plugins/{{name}}` or symlink it into `~/.claude/plugins/`.
+- **MCP server** — `internal/mcp/mcp.go`, a hand-rolled stdio JSON-RPC server using only `encoding/json`. Run it with `{{name}} mcp`.
+- **brief command** — `{{name}} brief` prints a Markdown context block to paste at the start of an AI session, so the agent starts with the project's shape already loaded.
+
+## Develop
+
+```bash
+./install.sh                 # builds → ~/.local/bin/{{name}}
+go test ./...
+go vet ./...
+gofmt -l .                   # should print nothing
+```
+
+## License
+
+{{license}}. See [LICENSE](LICENSE).

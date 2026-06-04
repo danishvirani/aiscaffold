@@ -39,7 +39,15 @@ dev = ["pytest>=8.0", "ruff>=0.5"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-aiscaffold = ["templates/**/*", "templates/**/.*"]
+# setuptools' "**" globs do NOT descend into dot-directories, so files nested
+# under .github/ or .claude-plugin/ need explicit patterns or they silently
+# drop out of the wheel (a curl/pipx install would then emit broken scaffolds).
+aiscaffold = [
+  "templates/**/*",
+  "templates/**/.*",
+  "templates/**/.github/workflows/*",
+  "templates/**/.claude-plugin/*",
+]
 
 [tool.ruff]
 line-length = 100

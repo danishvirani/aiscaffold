@@ -1,11 +1,12 @@
 # aiscaffold
 
-> Bootstrap a full AI-native CLI stack in 30 seconds. One command, all four surfaces, no Node, no SDK.
+> Bootstrap a full AI-native CLI stack in 30 seconds — in the language you ship in. One command, all four surfaces, already wired.
 
 Run it:
 
 ```bash
-pipx run aiscaffold my-tool
+pipx run aiscaffold my-tool            # Python (default)
+pipx run aiscaffold my-tool --lang go  # Go
 ```
 
 Or curl-install the dev build:
@@ -14,20 +15,18 @@ Or curl-install the dev build:
 curl -fsSL https://raw.githubusercontent.com/danishvirani/aiscaffold/main/install.sh | sh
 ```
 
-No `pip install langchain pydantic typer rich`. No Node. No Docker. Python 3.10+ is all you need — and so is everything it generates.
-
 ## What it generates
 
-Most authors cobble the AI-tooling stack together by hand: a CLI here, a Claude Code plugin there, an MCP server from a different generator, then wire them up. aiscaffold emits the whole bundle, already wired:
+Most authors cobble the AI-tooling stack together by hand: a CLI here, a Claude Code plugin there, an MCP server from a different generator, then wire them up. aiscaffold emits the whole bundle, already wired, for your target language:
 
 ```
-$ pipx run aiscaffold my-tool
-✓ src/my_tool/cli.py            stdlib argparse CLI
-✓ src/my_tool/mcp.py            stdio MCP server — no SDK dependency
+$ pipx run aiscaffold my-tool --lang go
+✓ cmd/my-tool/main.go          stdlib Go CLI
+✓ internal/mcp/mcp.go          stdio MCP server — encoding/json, no SDK
 ✓ plugins/my-tool/             Claude Code plugin: slash commands + skill
 ✓ my-tool brief                one-line AI session bootstrap, pre-wired
-✓ install.sh                   curl-installable
-✓ .github/workflows/ci.yml     lint + test on Python 3.10 / 3.11 / 3.12
+✓ install.sh                   builds + installs a single static binary
+✓ .github/workflows/ci.yml     vet + gofmt + test on Go 1.21 / 1.22
 
 cd my-tool && ./install.sh
 my-tool --help
@@ -35,33 +34,43 @@ my-tool --help
 
 30 seconds from "I have an idea" to "Claude Code can use my tool."
 
+## Languages
+
+| `--lang` | CLI | MCP server | Dependencies |
+|----------|-----|------------|--------------|
+| `python` (default) | `argparse` | hand-rolled stdio JSON-RPC | stdlib only |
+| `go` | stdlib `flag`-free dispatch | `encoding/json` stdio JSON-RPC | stdlib only |
+| `rust` | _coming next_ | | |
+| `node` | _coming next_ | | |
+
+Each language emits a complete, idiomatic project that builds, tests, lints, and runs its own CI green out of the box. The Claude Code plugin and bootstrap skill are language-agnostic and shared across every target.
+
 ## The four surfaces (and the brief)
 
-- **CLI** — a stdlib `argparse` binary with one working command. Add more by copying the pattern.
-- **Claude Code plugin** — `plugins/<name>/` with a manifest, a slash command per CLI command, and an auto-loading skill.
-- **MCP server** — `src/<name>/mcp.py`, a hand-rolled stdio JSON-RPC server. No SDK, no transitive deps.
+- **CLI** — a native binary for the chosen language with one working command. Add more by copying the pattern.
+- **Claude Code plugin** — `plugins/<name>/` with a manifest, a slash command per CLI command, and an auto-loading skill. The plugin's MCP entry points at `<name> mcp`, so it works identically regardless of language.
+- **MCP server** — a hand-rolled stdio JSON-RPC server with no SDK and no third-party deps. Run it with `<name> mcp`.
 - **brief command** — every scaffolded tool ships `<name> brief`, which prints a Markdown context block you paste at the start of an AI session. The pattern is the stickiness: every session starts faster.
 
 Skip any surface with `--no-plugin`, `--no-mcp`, `--no-skill`. Interactive prompts and flag-based invocation both work.
 
-## Why stdlib-only
+## Why one-line install
 
-The install command is the first thing a user experiences, and most AI tooling fails it on day one with a wall of `pip install`. aiscaffold installs with one shell line — and so does everything it generates. [ADR-001](docs/decisions/ADR-001-stdlib-only.md) explains the reasoning: zero runtime deps, any Python 3.10+ works, nothing to compile, nothing to audit.
-
-The thesis, repeated everywhere: **AI tooling should install with one shell line, no Node.**
+The install command is the first thing a user experiences, and most AI tooling fails it on day one with a wall of dependencies. aiscaffold installs with one shell line — and so does everything it generates, in every language. The generated MCP servers carry no SDK dependency, so there's nothing extra to audit. See [`docs/decisions/`](docs/decisions/) for the design record, including the multi-language decision ([ADR-002](docs/decisions/ADR-002-multi-language.md)) that superseded the original stdlib-only-Python wedge.
 
 ## Command surface
 
 ```bash
-aiscaffold <name>              # scaffold the full bundle into ./<name>/
-aiscaffold <name> --no-mcp     # skip a surface
+aiscaffold <name>                  # scaffold the full Python bundle into ./<name>/
+aiscaffold <name> --lang go        # scaffold a Go bundle
+aiscaffold <name> --no-mcp         # skip a surface
 aiscaffold --version
 aiscaffold --help
 ```
 
 ## Status
 
-v0.0 — scaffold. The CLI surface is wired; `aiscaffold <name>` exits 1 with a "v0.1 ships the real scaffolder" message. v0.1 ships the real thing: templates rendered into your chosen directory, all four surfaces wired up, the generated project's own CI green. See [`docs/roadmap.md`](docs/roadmap.md).
+v0.1 (in progress) — the real scaffolder. Renders all four surfaces into your chosen directory, wired up, with the generated project's own CI green. Python and Go are complete and verified end-to-end (build/lint/test + a live MCP stdio roundtrip); Rust and Node are next. See [`docs/roadmap.md`](docs/roadmap.md).
 
 ## License
 

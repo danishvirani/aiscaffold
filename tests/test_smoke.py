@@ -1,11 +1,13 @@
 """Tests for the aiscaffold scaffolder.
 
 Covers the CLI surface, the render core (variables + conditionals), and the
-scaffold orchestrator (full bundle + surface pruning), including a compile
-check that every generated Python file is syntactically valid.
+scaffold orchestrator across every supported language (full bundle + surface
+pruning). For Python it compiles the output; for Go it actually builds, vets,
+tests, runs the CLI, and exercises a live MCP stdio roundtrip.
 """
 
 import io
+import os
 import py_compile
 import shutil
 import subprocess
@@ -15,7 +17,14 @@ import pytest
 
 import aiscaffold
 from aiscaffold import cli
-from aiscaffold.render import RenderError, render_conditionals, render_string
+from aiscaffold.render import (
+    TEMPLATES_DIR,
+    Context,
+    RenderError,
+    render_conditionals,
+    render_string,
+)
+from aiscaffold.scaffold import LANGUAGES, template_roots
 
 
 # --- CLI surface ---------------------------------------------------------
@@ -36,6 +45,7 @@ def test_help_renders():
     assert "aiscaffold" in out
     assert "name" in out
     assert "--no-mcp" in out
+    assert "--lang" in out
 
 
 def test_version_flag():
@@ -93,9 +103,9 @@ def test_render_conditionals_unbalanced_raises():
 # --- scaffold orchestrator ----------------------------------------------
 
 
-def _scaffold(tmp_path, **flags):
+def _scaffold(tmp_path, lang="python", **flags):
     target = tmp_path / "out"
-    args = ["my-tool", "-o", str(target), "--yes", "--commands", "scan"]
+    args = ["my-tool", "-o", str(target), "--yes", "--commands", "scan", "--lang", lang]
     for f in flags.get("disable", []):
         args.append(f)
     rc = cli.main(args)
@@ -188,3 +198,106 @@ def test_generated_mcp_handles_initialize(tmp_path):
         assert resp["result"]["serverInfo"]["name"] == "my-tool"
     finally:
         sys.path.remove(str(out / "src"))
+
+
+# --- multi-language plumbing ---------------------------------------------
+
+
+def test_context_carries_lang():
+    assert Context(name="x").as_dict()["lang"] == "python"
+    assert Context(name="x", lang="go").as_dict()["lang"] == "go"
+
+
+def test_advertised_languages_have_template_trees():
+    # Never advertise a --lang choice without a real tree behind it.
+    for lang in LANGUAGES:
+        assert (TEMPLATES_DIR / lang).is_dir(), f"advertised lang {lang!r} has no templates/"
+
+
+def test_shared_tree_merges_into_every_language():
+    # The plugin/skill surfaces live only in _shared; each language inherits them.
+    for lang in LANGUAGES:
+        roots = template_roots(lang)
+        assert roots[0].name == "_shared"
+        assert roots[1].name == lang
+
+
+def test_rejects_unimplemented_language(tmp_path):
+    # argparse choices guard: an unbuilt language exits 2 (argparse raises
+    # SystemExit) rather than emitting a broken shared-only scaffold.
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["my-tool", "-o", str(tmp_path / "x"), "--yes", "--lang", "cobol"])
+    assert exc.value.code == 2
+
+
+# --- Go end-to-end (skipped when the toolchain is absent) ----------------
+
+_GO = shutil.which("go")
+
+
+def _go_env():
+    # GOTOOLCHAIN=local keeps `go` from trying to fetch a toolchain offline.
+    return {**os.environ, "GOTOOLCHAIN": "local"}
+
+
+@pytest.mark.skipif(_GO is None, reason="go not installed")
+def test_go_full_bundle_builds_vets_tests(tmp_path):
+    out = _scaffold(tmp_path, lang="go")
+    assert (out / "go.mod").exists()
+    assert (out / "cmd/my-tool/main.go").exists()
+    assert (out / "internal/mcp/mcp.go").exists()
+    assert (out / "README.md").exists()
+    assert (out / "install.sh").exists()
+    assert (out / ".github/workflows/ci.yml").exists()
+    # Shared surfaces come along for the ride.
+    assert (out / "LICENSE").exists()
+    assert (out / "plugins/my-tool/.claude-plugin/plugin.json").exists()
+    assert (out / "plugins/my-tool/commands/scan.md").exists()
+
+    fmt = subprocess.run(["gofmt", "-l", "."], cwd=out, capture_output=True, text=True)
+    assert fmt.stdout.strip() == "", f"gofmt flagged:\n{fmt.stdout}"
+    for cmd in (["go", "vet", "./..."], ["go", "build", "./..."], ["go", "test", "./..."]):
+        r = subprocess.run(cmd, cwd=out, capture_output=True, text=True, env=_go_env())
+        assert r.returncode == 0, f"{cmd}\n{r.stdout}\n{r.stderr}"
+
+
+@pytest.mark.skipif(_GO is None, reason="go not installed")
+def test_go_binary_runs_cli_and_mcp(tmp_path):
+    out = _scaffold(tmp_path, lang="go")
+    binary = tmp_path / "my-tool-bin"
+    build = subprocess.run(
+        ["go", "build", "-o", str(binary), "./cmd/my-tool"],
+        cwd=out,
+        capture_output=True,
+        text=True,
+        env=_go_env(),
+    )
+    assert build.returncode == 0, build.stderr
+
+    ran = subprocess.run([str(binary), "scan"], capture_output=True, text=True)
+    assert ran.returncode == 0 and ran.stdout.strip()
+
+    brief = subprocess.run([str(binary), "brief"], capture_output=True, text=True)
+    assert "my-tool" in brief.stdout
+
+    mcp = subprocess.run(
+        [str(binary), "mcp"],
+        input='{"jsonrpc": "2.0", "id": 1, "method": "initialize"}\n',
+        capture_output=True,
+        text=True,
+    )
+    assert '"serverInfo"' in mcp.stdout
+    assert "my-tool" in mcp.stdout
+
+
+@pytest.mark.skipif(_GO is None, reason="go not installed")
+def test_go_no_mcp_prunes_and_still_builds(tmp_path):
+    out = _scaffold(tmp_path, lang="go", disable=["--no-mcp"])
+    assert not (out / "internal/mcp/mcp.go").exists()
+    main_src = (out / "cmd/my-tool/main.go").read_text()
+    assert "internal/mcp" not in main_src
+    assert "mcp.Serve" not in main_src
+    r = subprocess.run(
+        ["go", "build", "./..."], cwd=out, capture_output=True, text=True, env=_go_env()
+    )
+    assert r.returncode == 0, r.stderr

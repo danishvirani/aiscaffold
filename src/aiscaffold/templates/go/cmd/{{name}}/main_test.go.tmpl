@@ -1,0 +1,44 @@
+package main
+
+import (
+	"bytes"
+	"strings"
+	"testing"
+)
+
+func TestCommandRuns(t *testing.T) {
+	var b bytes.Buffer
+	if rc := run([]string{"{{command}}"}, &b); rc != 0 {
+		t.Fatalf("exit = %d, want 0", rc)
+	}
+	if b.Len() == 0 {
+		t.Fatal("command produced no output")
+	}
+}
+
+func TestBriefMentionsName(t *testing.T) {
+	var b bytes.Buffer
+	if rc := run([]string{"brief"}, &b); rc != 0 {
+		t.Fatalf("exit = %d, want 0", rc)
+	}
+	if !strings.Contains(b.String(), "{{name}}") {
+		t.Fatal("brief does not mention the tool name")
+	}
+}
+
+func TestVersion(t *testing.T) {
+	var b bytes.Buffer
+	if rc := run([]string{"--version"}, &b); rc != 0 {
+		t.Fatalf("exit = %d, want 0", rc)
+	}
+	if !strings.Contains(b.String(), version) {
+		t.Fatal("version output missing version constant")
+	}
+}
+
+func TestUnknownCommand(t *testing.T) {
+	var b bytes.Buffer
+	if rc := run([]string{"nope"}, &b); rc != 2 {
+		t.Fatalf("exit = %d, want 2", rc)
+	}
+}

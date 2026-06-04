@@ -13,7 +13,7 @@ from pathlib import Path
 
 from aiscaffold import __version__
 from aiscaffold.render import Context
-from aiscaffold.scaffold import scaffold
+from aiscaffold.scaffold import LANGUAGES, scaffold
 
 _NAME_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9-]*$")
 
@@ -75,6 +75,7 @@ def _build_context(args: argparse.Namespace) -> Context:
         commands=commands,
         license=args.license,
         author=author,
+        lang=args.lang,
         with_plugin=not args.no_plugin,
         with_mcp=not args.no_mcp,
         with_skill=not args.no_skill,
@@ -96,7 +97,7 @@ def cmd_scaffold(args: argparse.Namespace) -> int:
     written = scaffold(ctx, out_dir)
 
     display = args.output_dir if args.output_dir else ctx.name
-    print(f"✓ Scaffolded {ctx.name} — {len(written)} files in {display}/")
+    print(f"✓ Scaffolded {ctx.name} ({ctx.lang}) — {len(written)} files in {display}/")
     print("")
     print("Next:")
     print(f"  cd {display}")
@@ -113,8 +114,9 @@ def cmd_scaffold(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="aiscaffold",
-        description="Bootstrap a full AI-native CLI stack in 30s: "
-        "stdlib CLI + Claude Code plugin + skill + MCP server + brief command.",
+        description="Bootstrap a full AI-native CLI stack in 30s, in the language you "
+        "ship in: CLI + Claude Code plugin + skill + MCP server + brief command. "
+        "Pick a target with --lang (python, go).",
         epilog="Full docs at https://github.com/danishvirani/aiscaffold",
     )
     parser.add_argument("-V", "--version", action="version", version=f"aiscaffold {__version__}")
@@ -128,6 +130,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--license", default="MIT", help="License (default: MIT)")
     parser.add_argument("--author", default=None, help="Author name (default: git user.name)")
+    parser.add_argument(
+        "--lang",
+        default="python",
+        choices=LANGUAGES,
+        help="Target language for the generated stack (default: python)",
+    )
     parser.add_argument("--no-plugin", action="store_true", help="Skip the Claude Code plugin")
     parser.add_argument("--no-mcp", action="store_true", help="Skip the MCP server")
     parser.add_argument("--no-skill", action="store_true", help="Skip the auto-loading skill")

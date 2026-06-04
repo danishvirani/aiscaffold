@@ -18,9 +18,9 @@ Paste the output, or read it, before planning changes. The brief is the source
 of truth for {{name}}'s command surface; prefer it over guessing.
 
 ## Surfaces
-- **CLI** — `{{name}} <command>`. Definitions in `src/{{package}}/cli.py`.
+- **CLI** — `{{name}} <command>`. Definitions live in the CLI source.
 {{#if with_mcp}}
-- **MCP server** — `{{name}} mcp`. Tools in `src/{{package}}/mcp.py`.
+- **MCP server** — `{{name}} mcp`. Tools live in the MCP server source.
 {{/if}}
 - **Slash commands** — `plugins/{{name}}/commands/`.
 

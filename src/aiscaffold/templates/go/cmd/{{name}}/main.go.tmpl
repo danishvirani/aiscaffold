@@ -1,0 +1,84 @@
+// {{name}} — {{description}}
+//
+// A stdlib-only Go CLI. Subcommands: {{command}}, brief{{#if with_mcp}}, mcp{{/if}}.
+// Add a command by adding a case to run() and a matching slash command under
+// plugins/{{name}}/commands/.
+package main
+
+import (
+	"fmt"
+	"io"
+	"os"
+{{#if with_mcp}}
+
+	"{{name}}/internal/mcp"
+{{/if}}
+)
+
+const version = "0.0.1"
+
+const usage = "" +
+	"{{name}} — {{description}}\n" +
+	"\n" +
+	"Usage: {{name}} <command>\n" +
+	"\n" +
+	"Commands:\n" +
+	"  {{command}}   the example command — replace with your own\n" +
+	"  brief   print an AI session-bootstrap context block\n" +
+{{#if with_mcp}}
+	"  mcp     run the stdio MCP server\n" +
+{{/if}}
+	"  version print the version\n" +
+	""
+
+const brief = "" +
+	"# {{name}} — session brief\n" +
+	"\n" +
+	"{{description}}\n" +
+	"\n" +
+	"## Commands\n" +
+	"- `{{name}} {{command}}` — the example command (replace with your own)\n" +
+	"- `{{name}} brief` — print this context block\n" +
+{{#if with_mcp}}
+	"- `{{name}} mcp` — run the stdio MCP server\n" +
+{{/if}}
+	"\n" +
+	"## How to extend\n" +
+	"Add a case in `run()` in `cmd/{{name}}/main.go` and a matching slash\n" +
+	"command under `plugins/{{name}}/commands/`.\n" +
+{{#if with_mcp}}
+	"Also register the tool in `internal/mcp/mcp.go` (tools + dispatch).\n" +
+{{/if}}
+	""
+
+func run(args []string, out io.Writer) int {
+	if len(args) == 0 {
+		fmt.Fprint(out, usage)
+		return 2
+	}
+	switch args[0] {
+	case "{{command}}":
+		fmt.Fprintln(out, "Hello from {{name}}. Replace this with your command's logic.")
+		return 0
+	case "brief":
+		fmt.Fprint(out, brief)
+		return 0
+	case "version", "-V", "--version":
+		fmt.Fprintln(out, "{{name}} "+version)
+		return 0
+{{#if with_mcp}}
+	case "mcp":
+		return mcp.Serve(os.Stdin, os.Stdout)
+{{/if}}
+	case "help", "-h", "--help":
+		fmt.Fprint(out, usage)
+		return 0
+	default:
+		fmt.Fprintf(out, "{{name}}: unknown command %q\n", args[0])
+		return 2
+	}
+}
+
+func main() {
+	os.Exit(run(os.Args[1:], os.Stdout))
+}

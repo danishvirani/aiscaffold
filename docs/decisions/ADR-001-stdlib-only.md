@@ -1,8 +1,14 @@
 # ADR-001: aiscaffold is stdlib-only (and so is everything it generates)
 
 Date: 2026-06-03
-Status: Accepted
+Status: Superseded by [ADR-002](ADR-002-multi-language.md) (2026-06-04)
 Deciders: Danish Virani
+
+> **Superseded.** This ADR scoped aiscaffold to a single language (Python) with a
+> stdlib-only-as-brand wedge. ADR-002 broadens the product to multiple target
+> languages. The "one-line install, no SDK in the generated MCP server" principle
+> survives per-language; the "Python-only / stdlib-as-the-whole-pitch" framing does
+> not. Kept verbatim below as the historical record.
 
 ## Context
 

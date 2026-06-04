@@ -1,8 +1,9 @@
 """Scaffold orchestrator.
 
-Walks the template tree, classifies each file by surface, prunes surfaces the
-user turned off, renders the rest, and writes them into the output directory.
-Stdlib-only.
+Merges the language-agnostic ``_shared`` template tree with the chosen
+language's tree (``templates/<lang>/``), classifies each file by surface,
+prunes surfaces the user turned off, renders the rest, and writes them into
+the output directory. Stdlib-only.
 """
 
 from pathlib import Path
@@ -15,18 +16,36 @@ from aiscaffold.render import (
     render_string,
 )
 
+# The language-agnostic tree, merged into every scaffold regardless of --lang.
+SHARED_DIR_NAME = "_shared"
+
+# Languages with a complete template tree under templates/<lang>/. Only list a
+# language here once every surface it ships actually builds and runs — an
+# advertised but half-built tree is worse than no tree. Rust and Node are next.
+LANGUAGES = ("python", "go")
+
 # Files that must keep their executable bit when written.
 _EXECUTABLE = {"install.sh"}
 
 
+def _strip_tmpl(name: str) -> str:
+    return name[:-5] if name.endswith(".tmpl") else name
+
+
 def classify_surface(rel_path: Path) -> str:
-    """Return the surface a template file belongs to: core | plugin | skill | mcp."""
+    """Return the surface a template file belongs to: core | plugin | skill | mcp.
+
+    Language-agnostic: the MCP server is any file whose rendered stem is
+    ``mcp`` (``mcp.py``, ``mcp.go``, ``mcp.rs``, ``mcp.js``) or that lives
+    under an ``mcp`` directory.
+    """
     parts = rel_path.parts
-    if "skills" in parts and parts[0] == "plugins":
-        return "skill"
-    if parts[0] == "plugins":
+    if parts and parts[0] == "plugins":
+        if "skills" in parts:
+            return "skill"
         return "plugin"
-    if rel_path.name == "mcp.py.tmpl":
+    stem = Path(_strip_tmpl(rel_path.name)).stem
+    if stem == "mcp" or "mcp" in parts:
         return "mcp"
     return "core"
 
@@ -42,11 +61,30 @@ def _included(surface: str, ctx: Context) -> bool:
     return True
 
 
-def iter_templates(templates_dir: Path = TEMPLATES_DIR):
-    """Yield (relative_path, absolute_path) for every template file."""
-    for path in sorted(templates_dir.rglob("*")):
-        if path.is_file():
-            yield path.relative_to(templates_dir), path
+def template_roots(lang: str, templates_dir: Path = TEMPLATES_DIR) -> list[Path]:
+    """The ordered template roots for *lang*: shared first, language last.
+
+    Later roots win on path collisions, so a language may override a shared
+    file by shipping the same relative path.
+    """
+    return [templates_dir / SHARED_DIR_NAME, templates_dir / lang]
+
+
+def iter_templates(roots):
+    """Yield (relative_path, absolute_path) for every template file across
+    *roots*. Later roots override earlier ones on identical relative paths."""
+    if isinstance(roots, Path):
+        roots = [roots]
+    merged: dict[str, tuple[Path, Path]] = {}
+    for root in roots:
+        if not root.exists():
+            continue
+        for path in sorted(root.rglob("*")):
+            if path.is_file():
+                rel = path.relative_to(root)
+                merged[str(rel)] = (rel, path)
+    for rel, path in sorted(merged.values(), key=lambda item: str(item[0])):
+        yield rel, path
 
 
 def scaffold(ctx: Context, out_dir: Path, templates_dir: Path = TEMPLATES_DIR) -> list[Path]:
@@ -54,9 +92,10 @@ def scaffold(ctx: Context, out_dir: Path, templates_dir: Path = TEMPLATES_DIR) -
     (paths relative to out_dir)."""
     variables = ctx.as_dict()
     flags = ctx.flags()
+    roots = template_roots(ctx.lang, templates_dir)
     written: list[Path] = []
 
-    for rel_path, abs_path in iter_templates(templates_dir):
+    for rel_path, abs_path in iter_templates(roots):
         if not _included(classify_surface(rel_path), ctx):
             continue
 
