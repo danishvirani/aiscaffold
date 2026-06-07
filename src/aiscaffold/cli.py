@@ -11,7 +11,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from aiscaffold import __version__
+from aiscaffold import __version__, languages
 from aiscaffold.render import Context
 from aiscaffold.scaffold import LANGUAGES, scaffold
 
@@ -111,16 +111,39 @@ def cmd_scaffold(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_compare(args: argparse.Namespace) -> int:
+    """Print the language decision matrix and exit. The --compare path never
+    scaffolds, so `name` is optional when it's set."""
+    print(languages.as_json() if args.json else languages.as_text())
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="aiscaffold",
         description="Bootstrap a full AI-native CLI stack in 30s, in the language you "
         "ship in: CLI + Claude Code plugin + skill + MCP server + brief command. "
-        "Pick a target with --lang (python, go, rust).",
+        "Pick a target with --lang (python, go, rust, node), or run --compare to see "
+        "which language fits your project.",
         epilog="Full docs at https://github.com/danishvirani/aiscaffold",
     )
     parser.add_argument("-V", "--version", action="version", version=f"aiscaffold {__version__}")
-    parser.add_argument("name", help="Name of the AI-native CLI to scaffold (e.g. my-tool)")
+    parser.add_argument(
+        "name",
+        nargs="?",
+        default=None,
+        help="Name of the AI-native CLI to scaffold (e.g. my-tool)",
+    )
+    parser.add_argument(
+        "--compare",
+        action="store_true",
+        help="Print the language decision matrix (which --lang to pick) and exit",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="With --compare, emit the matrix as JSON (for tools / the /pick command)",
+    )
     parser.add_argument(
         "-o", "--output-dir", default=None, help="Where to write (default: ./<name>)"
     )
@@ -140,14 +163,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-mcp", action="store_true", help="Skip the MCP server")
     parser.add_argument("--no-skill", action="store_true", help="Skip the auto-loading skill")
     parser.add_argument("-y", "--yes", action="store_true", help="Accept defaults; never prompt")
-    parser.set_defaults(func=cmd_scaffold)
     return parser
 
 
 def main(argv=None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return args.func(args)
+    if args.compare:
+        return cmd_compare(args)
+    if not args.name:
+        parser.error("a name is required to scaffold (or use --compare to choose a language)")
+    return cmd_scaffold(args)
 
 
 if __name__ == "__main__":

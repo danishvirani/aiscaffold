@@ -1,0 +1,6 @@
+{
+  "name": "aiscaffold",
+  "description": "Scaffold a full AI-native CLI stack (CLI + Claude Code plugin + skill + MCP + brief) in Python, Go, Rust, or Node — and recommend the best language for your project.",
+  "version": "0.1.0",
+  "author": { "name": "Danish Virani" }
+}

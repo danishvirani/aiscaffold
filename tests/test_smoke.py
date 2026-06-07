@@ -8,16 +8,18 @@ roundtrip.
 """
 
 import io
+import json
 import os
 import py_compile
 import shutil
 import subprocess
 from contextlib import redirect_stdout
+from pathlib import Path
 
 import pytest
 
 import aiscaffold
-from aiscaffold import cli
+from aiscaffold import cli, languages
 from aiscaffold.render import (
     TEMPLATES_DIR,
     Context,
@@ -26,6 +28,8 @@ from aiscaffold.render import (
     render_string,
 )
 from aiscaffold.scaffold import LANGUAGES, template_roots
+
+_REPO_ROOT = Path(aiscaffold.__file__).parents[2]
 
 
 # --- CLI surface ---------------------------------------------------------
@@ -67,6 +71,66 @@ def test_refuses_nonempty_output_dir(tmp_path):
     (tmp_path / "existing.txt").write_text("hi")
     rc = cli.main(["my-tool", "-o", str(tmp_path), "--yes"])
     assert rc == 1
+
+
+# --- language advisor (--compare + dogfood plugin) -----------------------
+
+
+def _run_capture(argv):
+    """Run cli.main(argv), returning (exit_code, stdout)."""
+    captured = io.StringIO()
+    with redirect_stdout(captured):
+        rc = cli.main(argv)
+    return rc, captured.getvalue()
+
+
+def test_compare_text_covers_every_language():
+    rc, out = _run_capture(["--compare"])
+    assert rc == 0
+    for lang in LANGUAGES:
+        assert lang in out
+    # It should actually advise, not just list — sanity-check the framing line.
+    assert "which --lang" in out
+
+
+def test_compare_does_not_require_a_name():
+    # --compare short-circuits before the name requirement.
+    rc, _ = _run_capture(["--compare"])
+    assert rc == 0
+
+
+def test_compare_json_is_valid_and_complete():
+    rc, out = _run_capture(["--compare", "--json"])
+    assert rc == 0
+    data = json.loads(out)
+    entries = data["languages"]
+    assert {e["id"] for e in entries} == set(LANGUAGES)
+    required = {"id", "tagline", "sweet_spot", "strengths", "avoid_when", "runtime_deps", "bundle"}
+    for e in entries:
+        assert required <= set(e), f"{e['id']} missing keys: {required - set(e)}"
+        assert e["strengths"] and e["avoid_when"]
+
+
+def test_guide_stays_in_lockstep_with_scaffold_languages():
+    # Advice must never drift from what's actually scaffoldable, in either
+    # direction: every advertised --lang has a guide entry and vice versa.
+    assert set(languages.guide_ids()) == set(LANGUAGES)
+
+
+def test_dogfood_plugin_manifest_is_valid():
+    manifest = _REPO_ROOT / "plugins/aiscaffold/.claude-plugin/plugin.json"
+    assert manifest.exists(), "aiscaffold should ship its own Claude Code plugin"
+    data = json.loads(manifest.read_text())
+    assert data["name"] == "aiscaffold"
+
+
+def test_dogfood_pick_command_wires_to_compare():
+    pick = _REPO_ROOT / "plugins/aiscaffold/commands/pick.md"
+    assert pick.exists(), "the /aiscaffold:pick advisor command should exist"
+    body = pick.read_text()
+    # The command's whole design is: read the matrix, then scaffold.
+    assert "aiscaffold --compare --json" in body
+    assert "--lang" in body
 
 
 # --- render core ---------------------------------------------------------

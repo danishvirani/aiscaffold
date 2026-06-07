@@ -47,6 +47,18 @@ my-tool --help
 
 Each language emits a complete, idiomatic project that builds, tests, lints, and runs its own CI green out of the box. The Claude Code plugin and bootstrap skill are language-agnostic and shared across every target.
 
+## Not sure which language? Ask first.
+
+Coding assistants reach for TypeScript/Next.js by reflex, whatever the project is. aiscaffold makes Go, Rust, or Python a one-liner — and helps you pick the one that actually fits, instead of defaulting on autopilot.
+
+```bash
+aiscaffold --compare          # opinionated decision matrix: each language's
+                              # sweet spot, strengths, and when to avoid it
+aiscaffold --compare --json   # same matrix, machine-readable
+```
+
+For a recommendation tailored to *your* project, aiscaffold ships its own Claude Code plugin with an `/aiscaffold:pick` command: it reads your project context, consults the matrix, recommends one language with a real rationale, then scaffolds it. The decision data stays in the dependency-free CLI; the reasoning rides in the plugin layer that actually has a model — see [ADR-003](docs/decisions/ADR-003-language-advisor.md).
+
 ## The four surfaces (and the brief)
 
 - **CLI** — a native binary for the chosen language with one working command. Add more by copying the pattern.
@@ -66,6 +78,7 @@ The install command is the first thing a user experiences, and most AI tooling f
 aiscaffold <name>                  # scaffold the full Python bundle into ./<name>/
 aiscaffold <name> --lang go        # scaffold a Go bundle
 aiscaffold <name> --no-mcp         # skip a surface
+aiscaffold --compare               # which --lang fits my project?
 aiscaffold --version
 aiscaffold --help
 ```
