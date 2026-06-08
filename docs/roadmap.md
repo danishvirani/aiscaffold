@@ -57,6 +57,18 @@ The first version someone can actually use. One command produces a working four-
 
 ---
 
+## v0.1.x — the language advisor (shipped)
+
+> **Added 2026-06-07.** Once aiscaffold went multi-language ([ADR-002](decisions/ADR-002-multi-language.md)), it could do something a single-language scaffolder can't: help the author *choose*. Coding assistants reach for TypeScript/Next.js by reflex; a multi-language scaffolder is the natural place to push back. This is **one feature among several**, not a new identity — aiscaffold is a scaffolder first.
+
+**What shipped:**
+- `aiscaffold --compare` — an opinionated, dependency-free decision matrix (per language: sweet spot, strengths, when to avoid, runtime deps, generated stack shape). `--compare --json` emits it machine-readably. Single source of truth in [`src/aiscaffold/languages.py`](../src/aiscaffold/languages.py), kept in lockstep with `scaffold.LANGUAGES` by a test.
+- aiscaffold's **own Claude Code plugin** at `plugins/aiscaffold/` with an `/aiscaffold:pick` command — reads the project context, consults the matrix via `aiscaffold --compare --json`, recommends one language with a rationale, then scaffolds it. aiscaffold now dogfoods the exact plugin surface it generates.
+
+**Design split (see [ADR-003](decisions/ADR-003-language-advisor.md)):** the *data* lives in the dependency-free CLI; the *reasoning* lives in the plugin layer that actually has a model. The CLI never gains an LLM dependency — the one-line, zero-dependency install is preserved.
+
+---
+
 ## v0.2 — polish + the things that make it stick
 
 **DoD:**
